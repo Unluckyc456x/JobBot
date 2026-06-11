@@ -2,16 +2,34 @@ import asyncio
 import random
 import sqlite3
 import os
-TOKEN = os.environ["BOT_TOKEN"]
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
 
-# ========== КОСТЯ ТОКЕНННННН ==========
+# ===== ВЕБ-СЕРВЕР ДЛЯ RENDER (чтобы бот не засыпал) =====
+from flask import Flask
+from threading import Thread
 
-# ============================================
+app_web = Flask('')
+
+@app_web.route('/')
+def home():
+    return "🤖 Бот Джоб работает!"
+
+def run():
+    port = int(os.environ.get('PORT', 5000))
+    app_web.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+# ========================================================
+
+# ========== ТОКЕН ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ ==========
+TOKEN = os.environ["BOT_TOKEN"]
+# ====================================================
 
 DB_PATH = "job_bot.db"
 
@@ -45,42 +63,34 @@ def init_db():
             quote TEXT,
             jobs_award INTEGER
         )''')
-        # КОСТЯ ЕБЛАН ЧТОБЫ ТЫ НЕ ЗАБЫЛ, УДАЛЯЕМ СТАРЫЕ КАРТЫ И ЗАПОЛНЯЕМ НОВЫМИ (30 штук)
         conn.execute("DELETE FROM cards")
         cards_data = [
-            # Null (1)
             ("Хоумлендер", "The Boys", "null", "https://postimg.cc/B8mcpvtw", "Я здесь бог.", 3000),
-            # Мифические (5)
             ("Мясник", "The Boys", "mythic", "https://postimg.cc/8J1v2gfH", "Мы спасём эту чёртову страну!", 1700),
             ("Декстер Морган", "Dexter", "mythic", "https://postimg.cc/V0JJwffZ", "Сегодня ночью — охота.", 1700),
             ("Тони Сопрано", "The Sopranos", "mythic", "https://postimg.cc/tZTTdqVf", "Я пришёл за утками.", 1700),
             ("Ганнибал Лектер", "Hannibal", "mythic", "https://postimg.cc/mcpCM65Z", "Печень — с бобами.", 1700),
             ("Уолтер Уайт", "Breaking Bad", "mythic", "https://postimg.cc/v18HMYXZ", "Я — тот, кто стучит.", 1700),
-            # Легендарные (5)
             ("Королева Мэйв", "The Boys", "legendary", "https://postimg.cc/Mn9J7ybS", "Хватит притворяться, Хоумлендер.", 800),
             ("Джесси Пинкман", "Breaking Bad", "legendary", "https://postimg.cc/gLFCz4d5", "Наука, bitch!", 800),
             ("Тринити-киллер", "Dexter", "legendary", "https://postimg.cc/4YLj7Xst", "Всё кончено, Декстер.", 800),
             ("Сол Гудман", "Better Call Saul", "legendary", "https://postimg.cc/hfKY2XGb", "Позвоните Солу!", 800),
             ("Уилл Грэм", "Hannibal", "legendary", "https://postimg.cc/fSD8qPML", "Это красиво.", 800),
-            # Эпические (5)
             ("Энни (Старлайт)", "The Boys", "epic", "https://postimg.cc/mt2stXCw", "Я верю в добро, даже если его почти не осталось.", 400),
             ("Дебра Морган", "Dexter", "epic", "https://postimg.cc/2bFs5h6Y", "Ты мне отвратителен, но я люблю тебя, брат.", 400),
             ("Кристофер Молтисанти", "The Sopranos", "epic", "https://postimg.cc/SJKByXpS", "Моя судьба — кино, а не это дерьмо.", 400),
             ("Ким Уэкслер", "Better Call Saul", "epic", "https://postimg.cc/fV9gLm2H", "Ты в деле, Сол.", 400),
             ("Гус Фринг", "Breaking Bad", "epic", "https://postimg.cc/LhQy3NrF", "Всё, что я делаю, я делаю для бизнеса.", 400),
-            # Редкие (6)
             ("Депп", "The Boys", "rare", "https://postimg.cc/TL7cQ3Nr", "Меня никто не уважает… даже осьминог.", 200),
             ("Сержант Докс", "Dexter", "rare", "https://postimg.cc/ykSTXBmm", "Я узнаю убийцу, когда вижу его.", 200),
             ("Поли Уолнатс", "The Sopranos", "rare", "https://postimg.cc/gnRvLspZ", "Что ты там говоришь?", 200),
             ("Лало Саламанка", "Better Call Saul", "rare", "https://postimg.cc/XGmCpGz0", "Расскажи это снова.", 200),
             ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://postimg.cc/Czy8088N", "Я найду тебя, Хайзенберг.", 200),
             ("Абигайл Хоббс", "Hannibal", "rare", "https://postimg.cc/cK5KbtZs", "Я не хотела этого.", 200),
-            # Необычные (4)
             ("Ханна Маккей", "Dexter", "uncommon", "https://postimg.cc/9rtDjnVB", "Мы созданы друг для друга, Декстер.", 100),
             ("Кармела Сопрано", "The Sopranos", "uncommon", "https://postimg.cc/7JrZFgRG", "Я знаю, кто ты, Тони.", 100),
             ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://postimg.cc/Sn1NS0PL", "Я просчитываю каждый шаг.", 100),
             ("Тодд Алуист", "Breaking Bad", "uncommon", "https://postimg.cc/dZ9wggdy", "Ничего личного.", 100),
-            # Простые (4)
             ("Французик", "The Boys", "common", "https://postimg.cc/5QpWsLd8", "Я люблю этот мир, но он не любит меня.", 50),
             ("Винс Масука", "Dexter", "common", "https://postimg.cc/svVW6hZS", "Это отличный день, чтобы быть живым!", 50),
             ("Дядя Джуниор", "The Sopranos", "common", "https://postimg.cc/nXrDZf2r", "У тебя никогда не было яиц.", 50),
@@ -215,7 +225,6 @@ async def my_cards(message: Message):
         return
     total = sum(r["count"] for r in rows)
     msg = f"📖 *Твоя коллекция* (всего {total} карт):\n\n"
-    # ГРУППИРОВКА ПО РЕДКОСТИ ЧТОБЫ НЕ ЗАБЫЛ 
     grouped = {}
     for r in rows:
         grouped.setdefault(r["rarity"], []).append(r)
@@ -242,6 +251,9 @@ async def main():
     init_db()
     print("✅ Джоб запущен и готов к работе!")
     await dp.start_polling(bot)
+
+# ===== ЗАПУСКАЕМ ВЕБ-СЕРВЕР В ОТДЕЛЬНОМ ПОТОКЕ =====
+keep_alive()
 
 if __name__ == "__main__":
     asyncio.run(main())
