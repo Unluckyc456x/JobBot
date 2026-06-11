@@ -109,8 +109,8 @@ def get_random_card(roll_count):
         if r <= cum:
             chosen = rarity
             break
-    if roll_count < 5 and chosen in ["mythic","null"]:
-        allowed = {k:v for k,v in RARITY_CHANCES.items() if k not in ["mythic","null"]}
+    if roll_count < 10 and chosen in ["legendary","mythic","null"]:
+        allowed = {k:v for k,v in RARITY_CHANCES.items() if k not in ["legendary","mythic","null"]}
         total = sum(allowed.values())
         r2 = random.random()
         cum2 = 0
@@ -165,9 +165,9 @@ async def cmd_start(message: Message):
         "📺 *Добро пожаловать в сериальную коллекцию, боец!*\n"
         "Меня зовут *Джоб*, и я помогаю собирать карты легендарных персонажей.\n\n"
         "🎴 *Как играть:*\n"
-        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту*» или /roll\n"
-        "• Смотри свою коллекцию: «*Джоб мои карты*» или /mycards\n"
-        "• Узнавай баланс джобсов: «*Джоб мой баланс*» или /jobs\n\n"
+        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту*»\n"
+        "• Смотри свою коллекцию: «*Джоб мои карты*»\n"
+        "• Узнавай баланс джобсов: «*Джоб мой баланс*»\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
         "Да начнётся коллекция!",
         parse_mode=ParseMode.MARKDOWN
