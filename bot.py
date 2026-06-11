@@ -7,16 +7,15 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import Message
 from aiogram.enums import ParseMode
-
-# ===== ВЕБ-СЕРВЕР ДЛЯ RENDER (чтобы бот не засыпал) =====
 from flask import Flask
 from threading import Thread
 
+# === Мини вебсервер для Render (чтобы не было тайм аута) ===
 app_web = Flask('')
 
 @app_web.route('/')
 def home():
-    return "🤖 Бот Джоб работает!"
+    return "Бот Джоб работает"
 
 def run():
     port = int(os.environ.get('PORT', 5000))
@@ -27,10 +26,7 @@ def keep_alive():
     t.start()
 # ========================================================
 
-# ========== ТОКЕН ИЗ ПЕРЕМЕННОЙ ОКРУЖЕНИЯ ==========
 TOKEN = os.environ["BOT_TOKEN"]
-# ====================================================
-
 DB_PATH = "job_bot.db"
 
 def get_db():
@@ -64,37 +60,38 @@ def init_db():
             jobs_award INTEGER
         )''')
         conn.execute("DELETE FROM cards")
+        # 2 варианта, должны быть ссылки на это (i.postimg.cc) либо нахуй переделывать и давать прямую ссылку (если не робит)
         cards_data = [
-            ("Хоумлендер", "The Boys", "null", "https://postimg.cc/B8mcpvtw", "Я здесь бог.", 3000),
-            ("Мясник", "The Boys", "mythic", "https://postimg.cc/8J1v2gfH", "Мы спасём эту чёртову страну!", 1700),
-            ("Декстер Морган", "Dexter", "mythic", "https://postimg.cc/V0JJwffZ", "Сегодня ночью — охота.", 1700),
-            ("Тони Сопрано", "The Sopranos", "mythic", "https://postimg.cc/tZTTdqVf", "Я пришёл за утками.", 1700),
-            ("Ганнибал Лектер", "Hannibal", "mythic", "https://postimg.cc/mcpCM65Z", "Печень — с бобами.", 1700),
-            ("Уолтер Уайт", "Breaking Bad", "mythic", "https://postimg.cc/v18HMYXZ", "Я — тот, кто стучит.", 1700),
-            ("Королева Мэйв", "The Boys", "legendary", "https://postimg.cc/Mn9J7ybS", "Хватит притворяться, Хоумлендер.", 800),
-            ("Джесси Пинкман", "Breaking Bad", "legendary", "https://postimg.cc/gLFCz4d5", "Наука, bitch!", 800),
-            ("Тринити-киллер", "Dexter", "legendary", "https://postimg.cc/4YLj7Xst", "Всё кончено, Декстер.", 800),
-            ("Сол Гудман", "Better Call Saul", "legendary", "https://postimg.cc/hfKY2XGb", "Позвоните Солу!", 800),
-            ("Уилл Грэм", "Hannibal", "legendary", "https://postimg.cc/fSD8qPML", "Это красиво.", 800),
-            ("Энни (Старлайт)", "The Boys", "epic", "https://postimg.cc/mt2stXCw", "Я верю в добро, даже если его почти не осталось.", 400),
-            ("Дебра Морган", "Dexter", "epic", "https://postimg.cc/2bFs5h6Y", "Ты мне отвратителен, но я люблю тебя, брат.", 400),
-            ("Кристофер Молтисанти", "The Sopranos", "epic", "https://postimg.cc/SJKByXpS", "Моя судьба — кино, а не это дерьмо.", 400),
-            ("Ким Уэкслер", "Better Call Saul", "epic", "https://postimg.cc/fV9gLm2H", "Ты в деле, Сол.", 400),
-            ("Гус Фринг", "Breaking Bad", "epic", "https://postimg.cc/LhQy3NrF", "Всё, что я делаю, я делаю для бизнеса.", 400),
-            ("Депп", "The Boys", "rare", "https://postimg.cc/TL7cQ3Nr", "Меня никто не уважает… даже осьминог.", 200),
-            ("Сержант Докс", "Dexter", "rare", "https://postimg.cc/ykSTXBmm", "Я узнаю убийцу, когда вижу его.", 200),
-            ("Поли Уолнатс", "The Sopranos", "rare", "https://postimg.cc/gnRvLspZ", "Что ты там говоришь?", 200),
-            ("Лало Саламанка", "Better Call Saul", "rare", "https://postimg.cc/XGmCpGz0", "Расскажи это снова.", 200),
-            ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://postimg.cc/Czy8088N", "Я найду тебя, Хайзенберг.", 200),
-            ("Абигайл Хоббс", "Hannibal", "rare", "https://postimg.cc/cK5KbtZs", "Я не хотела этого.", 200),
-            ("Ханна Маккей", "Dexter", "uncommon", "https://postimg.cc/9rtDjnVB", "Мы созданы друг для друга, Декстер.", 100),
-            ("Кармела Сопрано", "The Sopranos", "uncommon", "https://postimg.cc/7JrZFgRG", "Я знаю, кто ты, Тони.", 100),
-            ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://postimg.cc/Sn1NS0PL", "Я просчитываю каждый шаг.", 100),
-            ("Тодд Алуист", "Breaking Bad", "uncommon", "https://postimg.cc/dZ9wggdy", "Ничего личного.", 100),
-            ("Французик", "The Boys", "common", "https://postimg.cc/5QpWsLd8", "Я люблю этот мир, но он не любит меня.", 50),
-            ("Винс Масука", "Dexter", "common", "https://postimg.cc/svVW6hZS", "Это отличный день, чтобы быть живым!", 50),
-            ("Дядя Джуниор", "The Sopranos", "common", "https://postimg.cc/nXrDZf2r", "У тебя никогда не было яиц.", 50),
-            ("Чак Макгилл", "Better Call Saul", "common", "https://postimg.cc/HcDcQcg9", "Люди не меняются.", 50),
+            ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/B8mcpvtw/Homelander.jpg", "Я здесь бог.", 3000),
+            ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/8J1v2gfH/Butcher.jpg", "Мы спасём эту чёртову страну!", 1700),
+            ("Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/V0JJwffZ/Dexter.jpg", "Сегодня ночью — охота.", 1700),
+            ("Тони Сопрано", "The Sopranos", "mythic", "https://i.postimg.cc/tZTTdqVf/Tony.jpg", "Я пришёл за утками.", 1700),
+            ("Ганнибал Лектер", "Hannibal", "mythic", "https://i.postimg.cc/mcpCM65Z/Hannibal.jpg", "Печень — с бобами.", 1700),
+            ("Уолтер Уайт", "Breaking Bad", "mythic", "https://i.postimg.cc/v18HMYXZ/Walter.jpg", "Я — тот, кто стучит.", 1700),
+            ("Королева Мэйв", "The Boys", "legendary", "https://i.postimg.cc/Mn9J7ybS/Maeve.jpg", "Хватит притворяться, Хоумлендер.", 800),
+            ("Джесси Пинкман", "Breaking Bad", "legendary", "https://i.postimg.cc/gLFCz4d5/Jesse.jpg", "Наука, bitch!", 800),
+            ("Тринити-киллер", "Dexter", "legendary", "https://i.postimg.cc/4YLj7Xst/Trinity.jpg", "Всё кончено, Декстер.", 800),
+            ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/hfKY2XGb/Saul.jpg", "Позвоните Солу!", 800),
+            ("Уилл Грэм", "Hannibal", "legendary", "https://i.postimg.cc/fSD8qPML/Will.jpg", "Это красиво.", 800),
+            ("Энни (Старлайт)", "The Boys", "epic", "https://i.postimg.cc/mt2stXCw/Annie.jpg", "Я верю в добро, даже если его почти не осталось.", 400),
+            ("Дебра Морган", "Dexter", "epic", "https://i.postimg.cc/2bFs5h6Y/Debra.jpg", "Ты мне отвратителен, но я люблю тебя, брат.", 400),
+            ("Кристофер Молтисанти", "The Sopranos", "epic", "https://i.postimg.cc/SJKByXpS/Christopher.jpg", "Моя судьба — кино, а не это дерьмо.", 400),
+            ("Ким Уэкслер", "Better Call Saul", "epic", "https://i.postimg.cc/fV9gLm2H/Kim.jpg", "Ты в деле, Сол.", 400),
+            ("Гус Фринг", "Breaking Bad", "epic", "https://i.postimg.cc/LhQy3NrF/Gus.jpg", "Всё, что я делаю, я делаю для бизнеса.", 400),
+            ("Депп", "The Boys", "rare", "https://i.postimg.cc/TL7cQ3Nr/Deep.jpg", "Меня никто не уважает… даже осьминог.", 200),
+            ("Сержант Докс", "Dexter", "rare", "https://i.postimg.cc/ykSTXBmm/Doakes.jpg", "Я узнаю убийцу, когда вижу его.", 200),
+            ("Поли Уолнатс", "The Sopranos", "rare", "https://i.postimg.cc/gnRvLspZ/Paulie.jpg", "Что ты там говоришь?", 200),
+            ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/XGmCpGz0/Lalo.jpg", "Расскажи это снова.", 200),
+            ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://i.postimg.cc/Czy8088N/Hank.jpg", "Я найду тебя, Хайзенберг.", 200),
+            ("Абигайл Хоббс", "Hannibal", "rare", "https://i.postimg.cc/cK5KbtZs/Abigail.jpg", "Я не хотела этого.", 200),
+            ("Ханна Маккей", "Dexter", "uncommon", "https://i.postimg.cc/9rtDjnVB/Hannah.jpg", "Мы созданы друг для друга, Декстер.", 100),
+            ("Кармела Сопрано", "The Sopranos", "uncommon", "https://i.postimg.cc/7JrZFgRG/Carmela.jpg", "Я знаю, кто ты, Тони.", 100),
+            ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://i.postimg.cc/Sn1NS0PL/Mike.jpg", "Я просчитываю каждый шаг.", 100),
+            ("Тодд Алуист", "Breaking Bad", "uncommon", "https://i.postimg.cc/dZ9wggdy/Todd.jpg", "Ничего личного.", 100),
+            ("Французик", "The Boys", "common", "https://i.postimg.cc/5QpWsLd8/Frenchie.jpg", "Я люблю этот мир, но он не любит меня.", 50),
+            ("Винс Масука", "Dexter", "common", "https://i.postimg.cc/svVW6hZS/Masuka.jpg", "Это отличный день, чтобы быть живым!", 50),
+            ("Дядя Джуниор", "The Sopranos", "common", "https://i.postimg.cc/nXrDZf2r/UncleJunior.jpg", "У тебя никогда не было яиц.", 50),
+            ("Чак Макгилл", "Better Call Saul", "common", "https://i.postimg.cc/HcDcQcg9/Chuck.jpg", "Люди не меняются.", 50),
         ]
         for card in cards_data:
             conn.execute("INSERT INTO cards (name, series, rarity, image_url, quote, jobs_award) VALUES (?,?,?,?,?,?)", card)
@@ -152,6 +149,15 @@ def give_card(user_id, card, now):
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# ----- Функция для "нормы" текста ( не будет пробелов, знаков препинания) -----
+def normalize_text(text: str) -> str:
+    # удаляем лишние пробелы, знаки препинания в конце, приводим к нижнему регистру
+    text = text.strip().lower()
+    # убираем восклицательные знаки, точки, запятые в конце
+    text = text.rstrip('!.,;')
+    # заменяем множественные пробелы на один
+    return ' '.join(text.split())
+
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
     register_user(message.from_user.id, message.from_user.username or "no_name")
@@ -159,7 +165,7 @@ async def cmd_start(message: Message):
         "📺 *Добро пожаловать в сериальную коллекцию, боец!*\n"
         "Меня зовут *Джоб*, и я помогаю собирать карты легендарных персонажей.\n\n"
         "🎴 *Как играть:*\n"
-        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту!*» или /roll\n"
+        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту*» или /roll\n"
         "• Смотри свою коллекцию: «*Джоб мои карты*» или /mycards\n"
         "• Узнавай баланс джобсов: «*Джоб мой баланс*» или /jobs\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
@@ -173,15 +179,28 @@ async def cmd_help(message: Message):
         "📋 *Команды Джоба:*\n\n"
         "/start — запустить бота\n"
         "/help — это сообщение\n"
-        "/roll или «*Джоб дай карту!*» — получить карту (раз в 2 часа)\n"
-        "/mycards или «*Джоб мои карты*» — показать коллекцию\n"
-        "/jobs или «*Джоб мой баланс*» — сколько джобсов накопилось\n\n"
-        "Редкости: ⚪ Простая, 🟢 Необычная, 🔵 Редкая, 🟣 Эпическая, 🟠 Легендарная, 🔴 Мифическая, ⚫ Null"
+        "/roll или «Джоб дай карту» — получить карту (раз в 2 часа)\n"
+        "/mycards или «Джоб мои карты» — показать коллекцию\n"
+        "/jobs или «Джоб мой баланс» — сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
+# Мини обработчик текстовых команд (Джоб дай карту, Джоб мои карты, Джоб мой баланс)
+@dp.message(F.text)
+async def text_commands(message: Message):
+    user_id = message.from_user.id
+    text = normalize_text(message.text)
+    
+    # Проверяем фразы
+    if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
+        # Вызываем ту же логику, что и /roll
+        await roll_card(message)
+    elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
+        await my_cards(message)
+    elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
+        await show_balance(message)
+
 @dp.message(Command("roll"))
-@dp.message(F.text.lower().strip() == "Джоб дай карту!")
 async def roll_card(message: Message):
     user_id = message.from_user.id
     register_user(user_id, message.from_user.username or "no_name")
@@ -202,11 +221,11 @@ async def roll_card(message: Message):
     )
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
-    except:
+    except Exception as e:
+        # Если не удалось отправить картинку, отправляем только текст для теста бота и т.д.
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("mycards"))
-@dp.message(F.text.lower().strip() == "Джоб мои карты")
 async def my_cards(message: Message):
     user_id = message.from_user.id
     with get_db() as conn:
@@ -240,7 +259,6 @@ async def my_cards(message: Message):
     await message.answer(msg, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("jobs"))
-@dp.message(F.text.lower().strip() == "Джоб мой баланс")
 async def show_balance(message: Message):
     with get_db() as conn:
         row = conn.execute("SELECT total_jobs FROM users WHERE user_id = ?", (message.from_user.id,)).fetchone()
@@ -252,7 +270,7 @@ async def main():
     print("✅ Джоб запущен и готов к работе!")
     await dp.start_polling(bot)
 
-# ===== ЗАПУСКАЕМ ВЕБ-СЕРВЕР В ОТДЕЛЬНОМ ПОТОКЕ =====
+# Запуск вебсервера (чтобы Render не пиздел дохуя) и бота
 keep_alive()
 
 if __name__ == "__main__":
