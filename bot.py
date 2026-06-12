@@ -278,7 +278,7 @@ async def top_jobs(message: Message):
         print(f"Ошибка topjobs: {e}")
         await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
         
-        @dp.message(F.text & ~F.text.startswith("/"))
+@dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
     user_id = message.from_user.id
     text = normalize_text(message.text)
