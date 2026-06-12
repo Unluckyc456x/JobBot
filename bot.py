@@ -177,9 +177,9 @@ async def cmd_help(message: Message):
         "/start — запустить бота\n"
         "/help — это сообщение\n"
         "/topjobs — глобальный топ 30 по джобсам!\n"
-        "«Джоб дай карту» — получить карту (раз в 2 часа)\n"
-        "«Джоб мои карты» — показать коллекцию\n"
-        "«Джоб мой баланс» — сколько джобсов накопилось"
+        "«Джоб дай карту» или /roll — получить карту (раз в 2 часа)\n"
+        "«Джоб мои карты» или /mycards — показать коллекцию\n"
+        "«Джоб мой баланс» или /jobs — сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
@@ -277,6 +277,17 @@ async def top_jobs(message: Message):
     except Exception as e:
         print(f"Ошибка topjobs: {e}")
         await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
+        
+        @dp.message(F.text & ~F.text.startswith("/"))
+async def text_commands(message: Message):
+    user_id = message.from_user.id
+    text = normalize_text(message.text)
+    if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
+        await roll_card(message)
+    elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
+        await my_cards(message)
+    elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
+        await show_balance(message)
 
 async def main():
     init_db()
