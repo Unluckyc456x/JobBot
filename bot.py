@@ -62,35 +62,35 @@ def init_db():
         conn.execute("DELETE FROM cards")
         # 2 варианта, должны быть ссылки на это (i.postimg.cc) либо нахуй переделывать и давать прямую ссылку (если не робит)
         cards_data = [
-            ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/B8mcpvtw/Homelander.jpg", "Я здесь бог.", 3000),
-            ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/8J1v2gfH/Butcher.jpg", "Мы спасём эту чёртову страну!", 1700),
-            ("Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/V0JJwffZ/Dexter.jpg", "Сегодня ночью — охота.", 1700),
-            ("Тони Сопрано", "The Sopranos", "mythic", "https://i.postimg.cc/tZTTdqVf/Tony.jpg", "Я пришёл за утками.", 1700),
-            ("Ганнибал Лектер", "Hannibal", "mythic", "https://i.postimg.cc/mcpCM65Z/Hannibal.jpg", "Печень — с бобами.", 1700),
-            ("Уолтер Уайт", "Breaking Bad", "mythic", "https://i.postimg.cc/v18HMYXZ/Walter.jpg", "Я — тот, кто стучит.", 1700),
-            ("Королева Мэйв", "The Boys", "legendary", "https://i.postimg.cc/Mn9J7ybS/Maeve.jpg", "Хватит притворяться, Хоумлендер.", 800),
-            ("Джесси Пинкман", "Breaking Bad", "legendary", "https://i.postimg.cc/gLFCz4d5/Jesse.jpg", "Наука, bitch!", 800),
+            ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/B8mcpvtw/Homelander.jpg", "Я здесь бог.", 3333),
+            ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/8J1v2gfH/Butcher.jpg", "Мы спасём эту чёртову страну!", 2332),
+            ("Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/V0JJwffZ/Dexter.jpg", "Сегодня ночью — охота.", 1777),
+            ("Тони Сопрано", "The Sopranos", "mythic", "https://i.postimg.cc/tZTTdqVf/Tony.jpg", "Я пришёл за утками.", 1919),
+            ("Ганнибал Лектер", "Hannibal", "mythic", "https://i.postimg.cc/mcpCM65Z/Hannibal.jpg", "Печень — с бобами.", 2700),
+            ("Хайзенберг", "Breaking Bad", "mythic", "https://i.postimg.cc/v18HMYXZ/Walter.jpg", "Я — тот, кто стучит.", 2500),
+            ("Королева Мэйв", "The Boys", "legendary", "https://i.postimg.cc/Mn9J7ybS/Maeve.jpg", "Хватит притворяться, Хоумлендер.", 1636),
+            ("Джесси Пинкман", "Breaking Bad", "legendary", "https://i.postimg.cc/gLFCz4d5/Jesse.jpg", "Наука, bitch!", 1455),
             ("Тринити-киллер", "Dexter", "legendary", "https://i.postimg.cc/4YLj7Xst/Trinity.jpg", "Всё кончено, Декстер.", 800),
-            ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/hfKY2XGb/Saul.jpg", "Позвоните Солу!", 800),
-            ("Уилл Грэм", "Hannibal", "legendary", "https://i.postimg.cc/fSD8qPML/Will.jpg", "Это красиво.", 800),
-            ("Энни (Старлайт)", "The Boys", "epic", "https://i.postimg.cc/mt2stXCw/Annie.jpg", "Я верю в добро, даже если его почти не осталось.", 400),
-            ("Дебра Морган", "Dexter", "epic", "https://i.postimg.cc/2bFs5h6Y/Debra.jpg", "Ты мне отвратителен, но я люблю тебя, брат.", 400),
-            ("Кристофер Молтисанти", "The Sopranos", "epic", "https://i.postimg.cc/SJKByXpS/Christopher.jpg", "Моя судьба — кино, а не это дерьмо.", 400),
+            ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/hfKY2XGb/Saul.jpg", "Позвоните Солу!", 1321),
+            ("Уилл Грэм", "Hannibal", "legendary", "https://i.postimg.cc/fSD8qPML/Will.jpg", "Это красиво.", 1111),
+            ("Энни (Старлайт)", "The Boys", "epic", "https://i.postimg.cc/mt2stXCw/Annie.jpg", "Я верю в добро, даже если его почти не осталось.", 609),
+            ("Дебра Морган", "Dexter", "epic", "https://i.postimg.cc/2bFs5h6Y/Debra.jpg", "Ты мне отвратителен, но я люблю тебя, брат.", 512),
+            ("Кристофер Молтисанти", "The Sopranos", "epic", "https://i.postimg.cc/SJKByXpS/Christopher.jpg", "Моя судьба — кино, а не это дерьмо.", 464),
             ("Ким Уэкслер", "Better Call Saul", "epic", "https://i.postimg.cc/fV9gLm2H/Kim.jpg", "Ты в деле, Сол.", 400),
-            ("Гус Фринг", "Breaking Bad", "epic", "https://i.postimg.cc/LhQy3NrF/Gus.jpg", "Всё, что я делаю, я делаю для бизнеса.", 400),
-            ("Депп", "The Boys", "rare", "https://i.postimg.cc/TL7cQ3Nr/Deep.jpg", "Меня никто не уважает… даже осьминог.", 200),
-            ("Сержант Докс", "Dexter", "rare", "https://i.postimg.cc/ykSTXBmm/Doakes.jpg", "Я узнаю убийцу, когда вижу его.", 200),
-            ("Поли Уолнатс", "The Sopranos", "rare", "https://i.postimg.cc/gnRvLspZ/Paulie.jpg", "Что ты там говоришь?", 200),
-            ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/XGmCpGz0/Lalo.jpg", "Расскажи это снова.", 200),
-            ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://i.postimg.cc/Czy8088N/Hank.jpg", "Я найду тебя, Хайзенберг.", 200),
-            ("Абигайл Хоббс", "Hannibal", "rare", "https://i.postimg.cc/cK5KbtZs/Abigail.jpg", "Я не хотела этого.", 200),
-            ("Ханна Маккей", "Dexter", "uncommon", "https://i.postimg.cc/9rtDjnVB/Hannah.jpg", "Мы созданы друг для друга, Декстер.", 100),
-            ("Кармела Сопрано", "The Sopranos", "uncommon", "https://i.postimg.cc/7JrZFgRG/Carmela.jpg", "Я знаю, кто ты, Тони.", 100),
-            ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://i.postimg.cc/Sn1NS0PL/Mike.jpg", "Я просчитываю каждый шаг.", 100),
-            ("Тодд Алуист", "Breaking Bad", "uncommon", "https://i.postimg.cc/dZ9wggdy/Todd.jpg", "Ничего личного.", 100),
-            ("Французик", "The Boys", "common", "https://i.postimg.cc/5QpWsLd8/Frenchie.jpg", "Я люблю этот мир, но он не любит меня.", 50),
-            ("Винс Масука", "Dexter", "common", "https://i.postimg.cc/svVW6hZS/Masuka.jpg", "Это отличный день, чтобы быть живым!", 50),
-            ("Дядя Джуниор", "The Sopranos", "common", "https://i.postimg.cc/nXrDZf2r/UncleJunior.jpg", "У тебя никогда не было яиц.", 50),
+            ("Гус Фринг", "Breaking Bad", "epic", "https://i.postimg.cc/LhQy3NrF/Gus.jpg", "Всё, что я делаю, я делаю для бизнеса.", 444),
+            ("Депп", "The Boys", "rare", "https://i.postimg.cc/TL7cQ3Nr/Deep.jpg", "Меня никто не уважает… даже осьминог.", 277),
+            ("Сержант Докс", "Dexter", "rare", "https://i.postimg.cc/ykSTXBmm/Doakes.jpg", "Я узнаю убийцу, когда вижу его.", 400),
+            ("Поли Уолнатс", "The Sopranos", "rare", "https://i.postimg.cc/gnRvLspZ/Paulie.jpg", "Что ты там говоришь?", 217),
+            ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/XGmCpGz0/Lalo.jpg", "Расскажи это снова.", 389),
+            ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://i.postimg.cc/Czy8088N/Hank.jpg", "Я найду тебя, Хайзенберг.", 323),
+            ("Эбигейл Хоббс", "Hannibal", "rare", "https://i.postimg.cc/cK5KbtZs/Abigail.jpg", "Я не хотела этого.", 247),
+            ("Ханна Маккей", "Dexter", "uncommon", "https://i.postimg.cc/9rtDjnVB/Hannah.jpg", "Мы созданы друг для друга, Декстер.", 167),
+            ("Кармела Сопрано", "The Sopranos", "uncommon", "https://i.postimg.cc/7JrZFgRG/Carmela.jpg", "Я знаю, кто ты, Тони.", 111),
+            ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://i.postimg.cc/Sn1NS0PL/Mike.jpg", "Я просчитываю каждый шаг.", 129),
+            ("Тодд Алкист", "Breaking Bad", "uncommon", "https://i.postimg.cc/dZ9wggdy/Todd.jpg", "Ничего личного.", 100),
+            ("Французик", "The Boys", "common", "https://i.postimg.cc/5QpWsLd8/Frenchie.jpg", "Я люблю этот мир, но он не любит меня.", 100),
+            ("Винс Масука", "Dexter", "common", "https://i.postimg.cc/svVW6hZS/Masuka.jpg", "Это отличный день, чтобы быть живым!", 69),
+            ("Дядя Джуниор", "The Sopranos", "common", "https://i.postimg.cc/nXrDZf2r/UncleJunior.jpg", "У тебя никогда не было яиц.", 55),
             ("Чак Макгилл", "Better Call Saul", "common", "https://i.postimg.cc/HcDcQcg9/Chuck.jpg", "Люди не меняются.", 50),
         ]
         for card in cards_data:
@@ -169,6 +169,7 @@ async def cmd_start(message: Message):
         "• Смотри свою коллекцию: «*Джоб мои карты*»\n"
         "• Узнавай баланс джобсов: «*Джоб мой баланс*»\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
+        "🏆 Попади в глобальный *ТОП 30 по джобсам!*\n\n" 
         "Да начнётся коллекция!",
         parse_mode=ParseMode.MARKDOWN
     )
@@ -179,6 +180,7 @@ async def cmd_help(message: Message):
         "📋 *Команды Джоба:*\n\n"
         "/start — запустить бота\n"
         "/help — это сообщение\n"
+        "/topjobs — глобальный топ 30 по джобсам!\n"
         "«Джоб дай карту» — получить карту (раз в 2 часа)\n"
         "«Джоб мои карты» — показать коллекцию\n"
         "«Джоб мой баланс» — сколько джобсов накопилось"
@@ -264,6 +266,25 @@ async def show_balance(message: Message):
         row = conn.execute("SELECT total_jobs FROM users WHERE user_id = ?", (message.from_user.id,)).fetchone()
     jobs = row["total_jobs"] if row else 0
     await message.answer(f"💰 Джоб пересчитал твои заначки: {jobs} джобсов. Потрать их с умом (В будущем).")
+
+@dp.message(Command("topjobs")) # Это короче глобальный топ по джобсам (топ 30)
+async def top_jobs(message: Message):
+    with get_db() as conn:
+        rows = conn.execute('''
+            SELECT username, total_jobs FROM users
+            WHERE total_jobs > 0
+            ORDER BY total_jobs DESC
+            LIMIT 30
+        ''').fetchall()
+    if not rows:
+        await message.answer("Пока никто не заработал ни одного джобса. Начни первым!")
+        return
+    text = "🏆 *Топ 30 по джобсам:*\n\n"
+    for i, row in enumerate(rows, 1):
+        username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
+        text += f"{i}. @{username} — {row['total_jobs']} джобсов\n"
+    await message.answer(text, parse_mode=ParseMode.MARKDOWN)
+    # ========================================================
 
 async def main():
     init_db()
