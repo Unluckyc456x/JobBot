@@ -61,7 +61,7 @@ def init_db():
             jobs_award INTEGER
         )''')
         conn.execute("DELETE FROM cards")
-                cards_data = [
+        cards_data = [
             ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
             ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/pdb7CH2M/IMG-20260612-221039-579.jpg", "Мы спасём эту чёртову страну!", 2332),
             ("Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/tgczkddt/IMG-20260612-221039-343.jpg", "Сегодня ночью — охота.", 1777),
@@ -183,8 +183,6 @@ async def cmd_help(message: Message):
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
-
-
 @dp.message(Command("roll"))
 async def roll_card(message: Message):
     user_id = message.from_user.id
@@ -277,7 +275,7 @@ async def top_jobs(message: Message):
     except Exception as e:
         print(f"Ошибка topjobs: {e}")
         await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
-        
+
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
     user_id = message.from_user.id
