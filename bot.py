@@ -183,16 +183,7 @@ async def cmd_help(message: Message):
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
-@dp.message(F.text)
-async def text_commands(message: Message):
-    user_id = message.from_user.id
-    text = normalize_text(message.text)
-    if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
-        await roll_card(message)
-    elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
-        await my_cards(message)
-    elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
-        await show_balance(message)
+
 
 @dp.message(Command("roll"))
 async def roll_card(message: Message):
