@@ -257,27 +257,11 @@ async def show_balance(message: Message):
     jobs = row["total_jobs"] if row else 0
     await message.answer(f"💰 Джоб пересчитал твои заначки: {jobs} джобсов. Потрать их с умом (В будущем).")
 
-# ========== ВРЕМЕННАЯ КОМАНДА ДЛЯ ПРОВЕРКИ БАЗЫ ПОЛЬЩОВАТЕЛЕЙ (СИКРИТ КОМАНД) ==========
-@dp.message(Command("checkdb"))
-async def check_db(message: Message):
-    try:
-        with get_db() as conn:
-            # подсчпет количества пользователей
-            count_users = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-            count_with_jobs = conn.execute("SELECT COUNT(*) FROM users WHERE total_jobs > 0").fetchone()[0]
-            await message.answer(f"Всего пользователей: {count_users}\n"
-                                 f"Из них с джобсами >0: {count_with_jobs}\n"
-                                 f"Проверь, есть ли у тебя джобсы через /jobs")
-    except Exception as e:
-        await message.answer(f"Ошибка: {e}")
-# ========================================================
-
 @dp.message(Command("topjobs"))
 async def top_jobs(message: Message):
     try:
-        print("Команда /topjobs вызвана")
         with get_db() as conn:
-            # Уже есть row_factory в get_db, но на всякий случай:
+            # Включаем row_factory, чтобы обращаться по именам колонок
             conn.row_factory = sqlite3.Row
             rows = conn.execute('''
                 SELECT username, total_jobs FROM users
@@ -285,27 +269,18 @@ async def top_jobs(message: Message):
                 ORDER BY total_jobs DESC
                 LIMIT 30
             ''').fetchall()
-            print(f"Найдено записей: {len(rows)}")
         if not rows:
-            await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
+            await message.answer("💰 Пока никто не заработал ни одного джобса. Сделай пару роллов и возвращайся!")
             return
-        text = "🏆 <b>Топ 30 по джобсам:</b>\n\n"
-        medals = {1: "🥇", 2: "🥈", 3: "🥉", 4: "4️⃣", 5: "5️⃣", 6: "6️⃣", 7: "7️⃣", 8: "8️⃣", 9: "9️⃣", 10: "🔟"}
+        text = "🏆 *Топ 30 по джобсам:*\n\n"
+        medals = {1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣",6:"6️⃣",7:"7️⃣",8:"8️⃣",9:"9️⃣",10:"🔟"}
         for i, row in enumerate(rows, 1):
-            raw_username = row["username"]
-            if not raw_username or raw_username == "no_name":
-                username = "Аноним"
-            else:
-                # ВНИМНАНИЕ БЕЗ  @ (чтобы не создавать лишний пинг плльзователей)
-                username = html.escape(raw_username).replace("@", "")
+            username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
             medal = medals.get(i, f"{i}.")
-            text += f"{medal} <b>{username}</b> — {row['total_jobs']} 🪙\n"
-        await message.answer(text, parse_mode=ParseMode.HTML)
+            text += f"{medal} @{username} — {row['total_jobs']} 🪙\n"
+        await message.answer(text, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
-        print(f"ОШИБКА в topjobs: {e}")
-        import traceback
-        traceback.print_exc()
-        await message.answer(f"⚠️ Ошибка: {e}")
+        await message.answer(f"⚠️ Ошибка: {e}. Сообщи админу.")
 
 async def main():
     init_db()
