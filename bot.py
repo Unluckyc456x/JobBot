@@ -10,7 +10,7 @@ from aiogram.enums import ParseMode
 from flask import Flask
 from threading import Thread
 
-# === Мини вебсервер для Render (чтобы не было тайм аута) ===
+# === Мини вебсервер для Render ===
 app_web = Flask('')
 
 @app_web.route('/')
@@ -60,7 +60,6 @@ def init_db():
             jobs_award INTEGER
         )''')
         conn.execute("DELETE FROM cards")
-        # 2 варианта, должны быть ссылки на это (i.postimg.cc) либо нахуй переделывать и давать прямую ссылку (если не робит)
         cards_data = [
             ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/B8mcpvtw/Homelander.jpg", "Я здесь бог.", 3333),
             ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/8J1v2gfH/Butcher.jpg", "Мы спасём эту чёртову страну!", 2332),
@@ -149,13 +148,9 @@ def give_card(user_id, card, now):
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# ----- Функция для "нормы" текста ( не будет пробелов, знаков препинания) -----
 def normalize_text(text: str) -> str:
-    # удаляем лишние пробелы, знаки препинания в конце, приводим к нижнему регистру
     text = text.strip().lower()
-    # убираем восклицательные знаки, точки, запятые в конце
     text = text.rstrip('!.,;')
-    # заменяем множественные пробелы на один
     return ' '.join(text.split())
 
 @dp.message(Command("start"))
@@ -187,15 +182,11 @@ async def cmd_help(message: Message):
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
-# Мини обработчик текстовых команд (Джоб дай карту, Джоб мои карты, Джоб мой баланс)
 @dp.message(F.text)
 async def text_commands(message: Message):
     user_id = message.from_user.id
     text = normalize_text(message.text)
-    
-    # Проверяем фразы
     if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
-        # Вызываем ту же логику, что и /roll
         await roll_card(message)
     elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
         await my_cards(message)
@@ -224,7 +215,6 @@ async def roll_card(message: Message):
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
-        # Если не удалось отправить картинку, отправляем только текст для теста бота и т.д.
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("mycards"))
@@ -267,7 +257,7 @@ async def show_balance(message: Message):
     jobs = row["total_jobs"] if row else 0
     await message.answer(f"💰 Джоб пересчитал твои заначки: {jobs} джобсов. Потрать их с умом (В будущем).")
 
-@dp.message(Command("topjobs")) # Короче это глобальный топ 30 по джобсам
+@dp.message(Command("topjobs"))
 async def top_jobs(message: Message):
     try:
         with get_db() as conn:
@@ -280,23 +270,43 @@ async def top_jobs(message: Message):
         if not rows:
             await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
             return
-        text = "🏆 *Глобальный ТОП 30 по джобсам:*\n\n"
+        text = "🏆 *Топ 30 по джобсам:*\n\n"
         for i, row in enumerate(rows, 1):
             username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
-            text += f"{i}. @{username} — {row['total_jobs']} 🪙\n"
+            # Для топ 10 каждый эмодзи обнова
+            if i == 1:
+                medal = "🥇"
+            elif i == 2:
+                medal = "🥈"
+            elif i == 3:
+                medal = "🥉"
+            elif i == 4:
+                medal = "4️⃣"
+            elif i == 5:
+                medal = "5️⃣"
+            elif i == 6:
+                medal = "6️⃣"
+            elif i == 7:
+                medal = "7️⃣"
+            elif i == 8:
+                medal = "8️⃣"
+            elif i == 9:
+                medal = "9️⃣"
+            elif i == 10:
+                medal = "🔟"
+            else:
+                medal = f"{i}."
+            text += f"{medal} @{username} — {row['total_jobs']} 🪙\n"
         await message.answer(text, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
         print(f"Ошибка в topjobs: {e}")
         await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
-
-    # ========================================================
 
 async def main():
     init_db()
     print("✅ Джоб запущен и готов к работе!")
     await dp.start_polling(bot)
 
-# Запуск вебсервера (чтобы Render не пиздел дохуя) и бота
 keep_alive()
 
 if __name__ == "__main__":
