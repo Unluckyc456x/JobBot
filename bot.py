@@ -267,23 +267,28 @@ async def show_balance(message: Message):
     jobs = row["total_jobs"] if row else 0
     await message.answer(f"💰 Джоб пересчитал твои заначки: {jobs} джобсов. Потрать их с умом (В будущем).")
 
-@dp.message(Command("topjobs")) # Это короче глобальный топ по джобсам (топ 30)
+@dp.message(Command("topjobs")) # Короче это глобальный топ 30 по джобсам
 async def top_jobs(message: Message):
-    with get_db() as conn:
-        rows = conn.execute('''
-            SELECT username, total_jobs FROM users
-            WHERE total_jobs > 0
-            ORDER BY total_jobs DESC
-            LIMIT 30
-        ''').fetchall()
-    if not rows:
-        await message.answer("Пока никто не заработал ни одного джобса. Начни первым!")
-        return
-    text = "🏆 *Топ 30 по джобсам:*\n\n"
-    for i, row in enumerate(rows, 1):
-        username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
-        text += f"{i}. @{username} — {row['total_jobs']} джобсов\n"
-    await message.answer(text, parse_mode=ParseMode.MARKDOWN)
+    try:
+        with get_db() as conn:
+            rows = conn.execute('''
+                SELECT username, total_jobs FROM users
+                WHERE total_jobs > 0
+                ORDER BY total_jobs DESC
+                LIMIT 30
+            ''').fetchall()
+        if not rows:
+            await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
+            return
+        text = "🏆 *Глобальный ТОП 30 по джобсам:*\n\n"
+        for i, row in enumerate(rows, 1):
+            username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
+            text += f"{i}. @{username} — {row['total_jobs']} 🪙\n"
+        await message.answer(text, parse_mode=ParseMode.MARKDOWN)
+    except Exception as e:
+        print(f"Ошибка в topjobs: {e}")
+        await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
+
     # ========================================================
 
 async def main():
