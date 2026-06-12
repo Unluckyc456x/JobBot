@@ -1,6 +1,7 @@
 import asyncio
 import random
 import sqlite3
+import html
 import os
 from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types, F
@@ -261,7 +262,6 @@ async def show_balance(message: Message):
 async def top_jobs(message: Message):
     try:
         with get_db() as conn:
-            # Включаем row_factory, чтобы обращаться по именам колонок
             conn.row_factory = sqlite3.Row
             rows = conn.execute('''
                 SELECT username, total_jobs FROM users
@@ -270,17 +270,22 @@ async def top_jobs(message: Message):
                 LIMIT 30
             ''').fetchall()
         if not rows:
-            await message.answer("💰 Пока никто не заработал ни одного джобса. Сделай пару роллов и возвращайся!")
+            await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
             return
-        text = "🏆 *Топ 30 по джобсам:*\n\n"
+        text = "🏆 <b>Топ 30 по джобсам:</b>\n\n"
         medals = {1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣",6:"6️⃣",7:"7️⃣",8:"8️⃣",9:"9️⃣",10:"🔟"}
         for i, row in enumerate(rows, 1):
-            username = row["username"] if row["username"] and row["username"] != "no_name" else "Аноним"
+            raw_username = row["username"]
+            if not raw_username or raw_username == "no_name":
+                username = "Аноним"
+            else:
+                username = html.escape(raw_username).replace("@", "")
             medal = medals.get(i, f"{i}.")
-            text += f"{medal} @{username} — {row['total_jobs']} 🪙\n"
-        await message.answer(text, parse_mode=ParseMode.MARKDOWN)
+            text += f"{medal} <b>{username}</b> — {row['total_jobs']} 🪙\n"
+        await message.answer(text, parse_mode=ParseMode.HTML)
     except Exception as e:
-        await message.answer(f"⚠️ Ошибка: {e}. Сообщи админу.")
+        print(f"Ошибка topjobs: {e}")
+        await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
 
 async def main():
     init_db()
