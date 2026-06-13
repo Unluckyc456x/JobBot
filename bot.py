@@ -115,7 +115,7 @@ def get_random_card(roll_count):
             chosen = rarity
             break
     print(f"Выбрана редкость: {chosen}")
-    if roll_count < 10 and chosen in ["legendary","mythic","null"]:
+    if roll_count < 3 and chosen in ["legendary","mythic","null"]:
         allowed = {k:v for k,v in RARITY_CHANCES.items() if k not in ["legendary","mythic","null"]}
         total = sum(allowed.values())
         r2 = random.random()
@@ -148,9 +148,9 @@ def can_roll(user_id):
         return True, None
     last = datetime.fromisoformat(row["last_roll"])
     now = datetime.now()
-    if now - last >= timedelta(hours=4):
+    if now - last >= timedelta(hours=2):
         return True, None
-    remaining = timedelta(hours=4) - (now - last)
+    remaining = timedelta(hours=2) - (now - last)
     return False, f"{remaining.seconds//3600} ч {(remaining.seconds%3600)//60} мин"
 
 def give_card_to_user(user_id, card, now):
@@ -174,11 +174,11 @@ async def cmd_start(message: Message):
         "📺 *Добро пожаловать в сериальную коллекцию, боец!*\n"
         "Меня зовут *Джоб*, и я помогаю собирать карты легендарных персонажей.\n\n"
         "🎴 *Как играть:*\n"
-        "• Каждые 4 часа проси у меня карту: «*Джоб дай карту*»\n"
+        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту*»\n"
         "• Смотри свою коллекцию: «*Джоб мои карты*»\n"
         "• Узнавай баланс джобсов: «*Джоб мой баланс*»\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
-        "🏆 Попади в глобальный *ТОП 10 по джобсам!*\n\n" 
+        "🏆 Попади в глобальный *ТОП 30 по джобсам!*\n\n" 
         "Да начнётся коллекция!",
         parse_mode=ParseMode.MARKDOWN
     )
@@ -189,8 +189,8 @@ async def cmd_help(message: Message):
         "📋 *Команды Джоба:*\n\n"
         "/start - запустить бота\n"
         "/help - это сообщение\n"
-        "/topjobs - глобальный топ 10 по джобсам!\n"
-        "/roll или Джоб дай карту - получить случайную карту (раз в 4 часа)\n"
+        "/topjobs - глобальный топ 30 по джобсам!\n"
+        "/roll или Джоб дай карту - получить случайную карту (раз в 2 часа)\n"
         "/mycards или Джоб мои карты - показать коллекцию\n"
         "/jobs или Джоб мой баланс - сколько джобсов накопилось"
     )
@@ -271,12 +271,12 @@ async def top_jobs(message: Message):
                 SELECT username, total_jobs FROM users
                 WHERE total_jobs > 0
                 ORDER BY total_jobs DESC
-                LIMIT 10
+                LIMIT 30
             ''').fetchall()
         if not rows:
             await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
             return
-        text = "🏆 <b>Топ 10 по джобсам:</b>\n\n"
+        text = "🏆 <b>Топ 30 по джобсам:</b>\n\n"
         medals = {1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣",6:"6️⃣",7:"7️⃣",8:"8️⃣",9:"9️⃣",10:"🔟"}
         for i, row in enumerate(rows, 1):
             raw_username = row["username"]
