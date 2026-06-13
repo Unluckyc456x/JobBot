@@ -348,26 +348,41 @@ async def give_card(message: Message):
         await message.answer("❌ Используй: /give_card @username название_карты")
         return
     target_username = args[1].lstrip('@')
-    card_name = ' '.join(args[2:]).strip().lower()
+    card_name_input = ' '.join(args[2:]).strip().lower()
     with get_db() as conn:
+        # Находим пользователя
         cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
         user = cur.fetchone()
         if not user:
             await message.answer(f"❌ Пользователь @{target_username} не найден.")
             return
         target_id = user["user_id"]
-        cur = conn.execute("SELECT * FROM cards WHERE LOWER(name) = ?", (card_name,))
+        # Ищем карту
+        cur = conn.execute("SELECT * FROM cards WHERE LOWER(TRIM(name)) = ?", (card_name_input,))
         card = cur.fetchone()
         if not card:
-            cur = conn.execute("SELECT * FROM cards WHERE LOWER(name) LIKE ?", (f"%{card_name}%",))
+            cur = conn.execute("SELECT * FROM cards WHERE LOWER(TRIM(name)) LIKE ?", (f"%{card_name_input}%",))
             card = cur.fetchone()
             if not card:
-                await message.answer(f"❌ Карта «{card_name}» не найдена.")
+                sample = conn.execute("SELECT name FROM cards LIMIT 5").fetchall()
+                sample_names = [row["name"] for row in sample]
+                await message.answer(f"❌ Карта «{card_name_input}» не найдена. Примеры: {', '.join(sample_names)}")
                 return
         card_dict = dict(card)
         now = datetime.now()
-        conn.execute("INSERT INTO user_cards (user_id, card_id, count) VALUES (?, ?, 1) ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1", (target_id, card_dict["card_id"]))
-        conn.execute("UPDATE users SET total_cards = total_cards + 1, total_jobs = total_jobs + ? WHERE user_id = ?", (card_dict["jobs_award"], target_id))
+        # Выдаём карту
+        conn.execute("""
+            INSERT INTO user_cards (user_id, card_id, count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1
+        """, (target_id, card_dict["card_id"]))
+        conn.execute("""
+            UPDATE users
+            SET total_cards = total_cards + 1,
+                total_jobs = total_jobs + ?
+            WHERE user_id = ?
+        """, (card_dict["jobs_award"], target_id))
+        # Отправляем картинку с полной подписью в чат (как при ролле)
         rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}
         caption = (
             f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username} 🃏\n"
@@ -375,7 +390,11 @@ async def give_card(message: Message):
             f"💰 Джобсы: +{card_dict['jobs_award']} 💰\n"
             f"«{card_dict['quote']}»"
         )
-        await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
+        try:
+            await message.answer_photo(photo=card_dict["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
+        except Exception as e:
+            # Если фото не отправилось, шлём текст
+            await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("reset_user"))
 async def reset_user(message: Message):
