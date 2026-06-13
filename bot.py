@@ -185,6 +185,7 @@ async def cmd_help(message: Message):
 
 @dp.message(Command("roll"))
 async def roll_card(message: Message):
+    print("DEBUG: /roll команда вызвана")
     user_id = message.from_user.id
     register_user(user_id, message.from_user.username or "no_name")
     ok, rem = can_roll(user_id)
@@ -205,6 +206,7 @@ async def roll_card(message: Message):
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
+        print(f"Ошибка отправки фото: {e}")
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("mycards"))
@@ -278,16 +280,18 @@ async def top_jobs(message: Message):
 
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
+    print("DEBUG: текстовая команда получена")
     user_id = message.from_user.id
     text = normalize_text(message.text)
     if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
+        print("DEBUG: сработала фраза 'джоб дай карту'")
         await roll_card(message)
     elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
         await my_cards(message)
     elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
         await show_balance(message)
 
-# ========== АДМИН КОМАНДЫ только для меня)) ==========
+# ========== АДМИН КОМАНДЫ только для меня ==========
 ADMIN_ID = 6990974323
 
 @dp.message(Command("give_jobs"))
@@ -325,14 +329,12 @@ async def give_card(message: Message):
     target_username = args[1].lstrip('@')
     card_name = ' '.join(args[2:])
     with get_db() as conn:
-        # Находим пользователя
         cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
         user = cur.fetchone()
         if not user:
             await message.answer(f"❌ Пользователь @{target_username} не найден.")
             return
         target_id = user["user_id"]
-        # Находим карту
         cur = conn.execute("SELECT * FROM cards WHERE name = ?", (card_name,))
         card = cur.fetchone()
         if not card:
@@ -343,7 +345,6 @@ async def give_card(message: Message):
                 return
         card_dict = dict(card)
         now = datetime.now()
-        # Выдаём карту
         conn.execute("""
             INSERT INTO user_cards (user_id, card_id, count)
             VALUES (?, ?, 1)
@@ -355,16 +356,14 @@ async def give_card(message: Message):
                 total_jobs = total_jobs + ?
             WHERE user_id = ?
         """, (card_dict["jobs_award"], target_id))
-        # Отправляем красивое сообщение в тот же чат
         rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}
         caption = (
-            f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username}* 🃏\n"
+            f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username} 🃏\n"
             f"✨ Редкость: {rarity_ru[card_dict['rarity']]} ✨\n"
             f"💰 Джобсы: +{card_dict['jobs_award']} 💰\n"
             f"«{card_dict['quote']}»"
         )
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
-        # Если выдаём себе, дополнительно не нужно
         if target_id == ADMIN_ID:
             await message.answer("(*Разработчик сам выдал карту самому себе* 👑)")
 
