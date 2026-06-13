@@ -11,7 +11,7 @@ from aiogram.enums import ParseMode
 from flask import Flask
 from threading import Thread
 
-# === Мини-вебсервер для Render (отдельный поток, не мешает polling) ===
+# === Веб-сервер (отдельный поток, чтобы Render не убивал) ===
 app_web = Flask('')
 
 @app_web.route('/')
@@ -25,7 +25,7 @@ def run_web():
 def keep_alive():
     t = Thread(target=run_web, daemon=True)
     t.start()
-# ========================================================
+# =========================================================
 
 TOKEN = os.environ["BOT_TOKEN"]
 DB_PATH = "job_bot.db"
@@ -60,6 +60,7 @@ def init_db():
             quote TEXT,
             jobs_award INTEGER
         )''')
+        # Удаляем старые карты и вставляем новые (все 30)
         conn.execute("DELETE FROM cards")
         cards_data = [
             ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
@@ -96,11 +97,15 @@ def init_db():
         for card in cards_data:
             conn.execute("INSERT INTO cards (name, series, rarity, image_url, quote, jobs_award) VALUES (?,?,?,?,?,?)", card)
         conn.commit()
+        # Диагностика: проверим количество карт
+        count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        print(f"Инициализация БД: добавлено {count} карт")
 
 RARITY_CHANCES = {"common":0.44,"uncommon":0.22,"rare":0.15,"epic":0.10,"legendary":0.05,"mythic":0.03,"null":0.01}
 RARITY_EMOJI = {"common":"⚪","uncommon":"🟢","rare":"🔵","epic":"🟣","legendary":"🟠","mythic":"🔴","null":"⚫"}
 
 def get_random_card(roll_count):
+    print("DEBUG: get_random_card вызвана, roll_count=", roll_count)
     r = random.random()
     cum = 0
     chosen = "common"
@@ -109,6 +114,7 @@ def get_random_card(roll_count):
         if r <= cum:
             chosen = rarity
             break
+    print(f"Выбрана редкость: {chosen}")
     if roll_count < 10 and chosen in ["legendary","mythic","null"]:
         allowed = {k:v for k,v in RARITY_CHANCES.items() if k not in ["legendary","mythic","null"]}
         total = sum(allowed.values())
@@ -119,9 +125,16 @@ def get_random_card(roll_count):
             if r2 <= cum2:
                 chosen = rarity
                 break
+        print(f"Сработала защита, новая редкость: {chosen}")
     with get_db() as conn:
         cur = conn.execute("SELECT * FROM cards WHERE rarity = ? ORDER BY RANDOM() LIMIT 1", (chosen,))
-        return dict(cur.fetchone())
+        card = cur.fetchone()
+        if card is None:
+            print(f"ОШИБКА: нет карт с редкостью {chosen}")
+            # fallback – взять любую карту
+            cur = conn.execute("SELECT * FROM cards ORDER BY RANDOM() LIMIT 1")
+            card = cur.fetchone()
+        return dict(card)
 
 def register_user(user_id, username):
     with get_db() as conn:
@@ -140,7 +153,7 @@ def can_roll(user_id):
     remaining = timedelta(hours=2) - (now - last)
     return False, f"{remaining.seconds//3600} ч {(remaining.seconds%3600)//60} мин"
 
-def give_card(user_id, card, now):
+def give_card_to_user(user_id, card, now):
     with get_db() as conn:
         conn.execute("UPDATE users SET roll_count = roll_count + 1 WHERE user_id = ?", (user_id,))
         conn.execute("INSERT INTO user_cards (user_id, card_id, count) VALUES (?,?,1) ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1", (user_id, card["card_id"]))
@@ -177,14 +190,15 @@ async def cmd_help(message: Message):
         "/start — запустить бота\n"
         "/help — это сообщение\n"
         "/topjobs — глобальный топ 30 по джобсам!\n"
-        "«Джоб дай карту» или /roll — получить карту (раз в 2 часа)\n"
-        "«Джоб мои карты» или /mycards — показать коллекцию\n"
-        "«Джоб мой баланс» или /jobs — сколько джобсов накопилось"
+        "/roll — получить случайную карту (раз в 2 часа)\n"
+        "/mycards — показать коллекцию\n"
+        "/jobs — сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("roll"))
 async def roll_card(message: Message):
+    print("DEBUG: /roll команда получена")
     user_id = message.from_user.id
     register_user(user_id, message.from_user.username or "no_name")
     ok, rem = can_roll(user_id)
@@ -194,7 +208,7 @@ async def roll_card(message: Message):
     with get_db() as conn:
         roll_cnt = conn.execute("SELECT roll_count FROM users WHERE user_id = ?", (user_id,)).fetchone()["roll_count"]
     card = get_random_card(roll_cnt)
-    give_card(user_id, card, datetime.now())
+    give_card_to_user(user_id, card, datetime.now())
     rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}[card["rarity"]]
     caption = (
         f"🃏 Джоб достаёт карту «{card['name']} ({card['series']})» 🃏\n"
@@ -205,6 +219,7 @@ async def roll_card(message: Message):
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
+        print(f"Ошибка отправки фото: {e}")
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("mycards"))
@@ -276,11 +291,21 @@ async def top_jobs(message: Message):
         print(f"Ошибка topjobs: {e}")
         await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
 
+@dp.message(Command("check_cards"))
+async def check_cards(message: Message):
+    with get_db() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+        sample = conn.execute("SELECT name FROM cards LIMIT 5").fetchall()
+        names = [row["name"] for row in sample]
+        await message.answer(f"Всего карт: {count}\nПервые 5: {', '.join(names)}")
+
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
+    print("DEBUG: текстовая команда получена:", message.text)
     user_id = message.from_user.id
     text = normalize_text(message.text)
     if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
+        print("DEBUG: распознана фраза 'джоб дай карту'")
         await roll_card(message)
     elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
         await my_cards(message)
