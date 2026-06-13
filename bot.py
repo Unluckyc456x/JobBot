@@ -287,6 +287,114 @@ async def text_commands(message: Message):
     elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
         await show_balance(message)
 
+# ========== АДМИН КОМАНДЫ только для меня)) ==========
+ADMIN_ID = 6990974323
+
+@dp.message(Command("give_jobs"))
+async def give_jobs(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /give_jobs @username количество")
+        return
+    target_username = args[1].lstrip('@')
+    try:
+        amount = int(args[2])
+    except:
+        await message.answer("❌ Количество должно быть числом.")
+        return
+    with get_db() as conn:
+        cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
+        user = cur.fetchone()
+        if not user:
+            await message.answer(f"❌ Пользователь @{target_username} не найден в базе (он должен хотя бы раз написать боту).")
+            return
+        target_id = user["user_id"]
+        conn.execute("UPDATE users SET total_jobs = total_jobs + ? WHERE user_id = ?", (amount, target_id))
+        await message.answer(f"✅ Выдано {amount} джобсов пользователю @{target_username}.")
+
+@dp.message(Command("give_card"))
+async def give_card(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /give_card @username название_карты")
+        return
+    target_username = args[1].lstrip('@')
+    card_name = ' '.join(args[2:])
+    with get_db() as conn:
+        # Находим пользователя
+        cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
+        user = cur.fetchone()
+        if not user:
+            await message.answer(f"❌ Пользователь @{target_username} не найден.")
+            return
+        target_id = user["user_id"]
+        # Находим карту
+        cur = conn.execute("SELECT * FROM cards WHERE name = ?", (card_name,))
+        card = cur.fetchone()
+        if not card:
+            cur = conn.execute("SELECT * FROM cards WHERE name LIKE ?", (f"%{card_name}%",))
+            card = cur.fetchone()
+            if not card:
+                await message.answer(f"❌ Карта «{card_name}» не найдена.")
+                return
+        card_dict = dict(card)
+        now = datetime.now()
+        # Выдаём карту
+        conn.execute("""
+            INSERT INTO user_cards (user_id, card_id, count)
+            VALUES (?, ?, 1)
+            ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1
+        """, (target_id, card_dict["card_id"]))
+        conn.execute("""
+            UPDATE users
+            SET total_cards = total_cards + 1,
+                total_jobs = total_jobs + ?
+            WHERE user_id = ?
+        """, (card_dict["jobs_award"], target_id))
+        # Отправляем красивое сообщение в тот же чат
+        rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}
+        caption = (
+            f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username}* 🃏\n"
+            f"✨ Редкость: {rarity_ru[card_dict['rarity']]} ✨\n"
+            f"💰 Джобсы: +{card_dict['jobs_award']} 💰\n"
+            f"«{card_dict['quote']}»"
+        )
+        await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
+        # Если выдаём себе, дополнительно не нужно
+        if target_id == ADMIN_ID:
+            await message.answer("(*Разработчик сам выдал карту самому себе* 👑)")
+
+@dp.message(Command("reset_user"))
+async def reset_user(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /reset_user @username")
+        return
+    target_username = args[1].lstrip('@')
+    with get_db() as conn:
+        cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
+        user = cur.fetchone()
+        if not user:
+            await message.answer(f"❌ Пользователь @{target_username} не найден.")
+            return
+        target_id = user["user_id"]
+        conn.execute("DELETE FROM user_cards WHERE user_id = ?", (target_id,))
+        conn.execute("""
+            UPDATE users
+            SET total_cards = 0, total_jobs = 0, last_roll = NULL, roll_count = 0
+            WHERE user_id = ?
+        """, (target_id,))
+        await message.answer(f"✅ Прогресс пользователя @{target_username} полностью сброшен.")
+        if target_id == ADMIN_ID:
+            await message.answer("🔄 Твой прогресс сброшен.")
+# ===============================================
+
 async def main():
     init_db()
     print("✅ Джоб запущен и готов к работе!")
