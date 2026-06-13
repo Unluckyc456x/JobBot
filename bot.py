@@ -60,7 +60,7 @@ def init_db():
             quote TEXT,
             jobs_award INTEGER
         )''')
-        # Удаляем старые карты и вставляем новые (все 30)
+        # БАЗА ДАННЫХ КАРТ
         conn.execute("DELETE FROM cards")
         cards_data = [
             ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
@@ -97,7 +97,7 @@ def init_db():
         for card in cards_data:
             conn.execute("INSERT INTO cards (name, series, rarity, image_url, quote, jobs_award) VALUES (?,?,?,?,?,?)", card)
         conn.commit()
-        # Диагностика: проверим количество карт
+        # ПРОВЕРКА КОЛИЧЕСТВА КАРТИ
         count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
         print(f"Инициализация БД: добавлено {count} карт")
 
@@ -148,9 +148,9 @@ def can_roll(user_id):
         return True, None
     last = datetime.fromisoformat(row["last_roll"])
     now = datetime.now()
-    if now - last >= timedelta(hours=2):
+    if now - last >= timedelta(hours=4):
         return True, None
-    remaining = timedelta(hours=2) - (now - last)
+    remaining = timedelta(hours=4) - (now - last)
     return False, f"{remaining.seconds//3600} ч {(remaining.seconds%3600)//60} мин"
 
 def give_card_to_user(user_id, card, now):
@@ -174,7 +174,7 @@ async def cmd_start(message: Message):
         "📺 *Добро пожаловать в сериальную коллекцию, боец!*\n"
         "Меня зовут *Джоб*, и я помогаю собирать карты легендарных персонажей.\n\n"
         "🎴 *Как играть:*\n"
-        "• Каждые 2 часа проси у меня карту: «*Джоб дай карту*»\n"
+        "• Каждые 4 часа проси у меня карту: «*Джоб дай карту*»\n"
         "• Смотри свою коллекцию: «*Джоб мои карты*»\n"
         "• Узнавай баланс джобсов: «*Джоб мой баланс*»\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
@@ -190,9 +190,9 @@ async def cmd_help(message: Message):
         "/start — запустить бота\n"
         "/help — это сообщение\n"
         "/topjobs — глобальный топ 30 по джобсам!\n"
-        "/roll — получить случайную карту (раз в 2 часа)\n"
-        "/mycards — показать коллекцию\n"
-        "/jobs — сколько джобсов накопилось"
+        "/roll или Джоб дай карту — получить случайную карту (раз в 4 часа)\n"
+        "/mycards или Джоб мои карты — показать коллекцию\n"
+        "/jobs или Джоб мой баланс — сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
