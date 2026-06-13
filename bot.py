@@ -299,6 +299,15 @@ async def check_cards(message: Message):
         names = [row["name"] for row in sample]
         await message.answer(f"Всего карт: {count}\nПервые 5: {', '.join(names)}")
 
+@dp.message(Command("cards_list"))
+async def cards_list(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return
+    with get_db() as conn:
+        rows = conn.execute("SELECT card_id, name FROM cards ORDER BY card_id").fetchall()
+        text = "📋 Список карт (ID: название):\n" + "\n".join([f"{r['card_id']}: {r['name']}" for r in rows])
+        await message.answer(text)
+
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
     print("DEBUG: текстовая команда получена:", message.text)
@@ -345,10 +354,10 @@ async def give_card(message: Message):
         return
     args = message.text.split()
     if len(args) < 3:
-        await message.answer("❌ Используй: /give_card @username название_карты")
+        await message.answer("❌ Используй: /give_card @username ID_карты_или_название")
         return
     target_username = args[1].lstrip('@')
-    card_name_input = ' '.join(args[2:]).strip().lower()
+    query = ' '.join(args[2:]).strip()
     with get_db() as conn:
         # Находим пользователя
         cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
@@ -357,17 +366,22 @@ async def give_card(message: Message):
             await message.answer(f"❌ Пользователь @{target_username} не найден.")
             return
         target_id = user["user_id"]
-        # Ищем карту
-        cur = conn.execute("SELECT * FROM cards WHERE LOWER(TRIM(name)) = ?", (card_name_input,))
-        card = cur.fetchone()
-        if not card:
-            cur = conn.execute("SELECT * FROM cards WHERE LOWER(TRIM(name)) LIKE ?", (f"%{card_name_input}%",))
+        # Пытаемся найти карту: сначала по ID (если ввод — число)
+        card = None
+        if query.isdigit():
+            cur = conn.execute("SELECT * FROM cards WHERE card_id = ?", (int(query),))
             card = cur.fetchone()
-            if not card:
-                sample = conn.execute("SELECT name FROM cards LIMIT 5").fetchall()
-                sample_names = [row["name"] for row in sample]
-                await message.answer(f"❌ Карта «{card_name_input}» не найдена. Примеры: {', '.join(sample_names)}")
-                return
+        if not card:
+            # Поиск по названию: убираем лишние пробелы, приводим к нижнему регистру
+            query_clean = query.lower().replace('  ', ' ').strip()
+            cur = conn.execute("SELECT * FROM cards WHERE LOWER(REPLACE(name, ' ', '')) = LOWER(REPLACE(?, ' ', ''))", (query_clean,))
+            card = cur.fetchone()
+        if not card:
+            # Если не нашли — выводим список всех карт с ID
+            all_cards = conn.execute("SELECT card_id, name FROM cards ORDER BY card_id").fetchall()
+            card_lines = [f"{c['card_id']}: {c['name']}" for c in all_cards[:20]]
+            await message.answer("❌ Карта не найдена.\nИспользуй ID или название.\nСписок карт (ID: название):\n" + "\n".join(card_lines))
+            return
         card_dict = dict(card)
         now = datetime.now()
         # Выдаём карту
@@ -382,7 +396,7 @@ async def give_card(message: Message):
                 total_jobs = total_jobs + ?
             WHERE user_id = ?
         """, (card_dict["jobs_award"], target_id))
-        # Отправляем картинку с полной подписью в чат (как при ролле)
+        # Отправляем сообщение (с картинкой или без)
         rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}
         caption = (
             f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username} 🃏\n"
@@ -392,8 +406,7 @@ async def give_card(message: Message):
         )
         try:
             await message.answer_photo(photo=card_dict["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
-        except Exception as e:
-            # Если фото не отправилось, шлём текст
+        except Exception:
             await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("reset_user"))
