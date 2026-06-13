@@ -178,7 +178,7 @@ async def cmd_start(message: Message):
         "• Смотри свою коллекцию: «*Джоб мои карты*»\n"
         "• Узнавай баланс джобсов: «*Джоб мой баланс*»\n\n"
         "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
-        "🏆 Попади в глобальный *ТОП 30 по джобсам!*\n\n" 
+        "🏆 Попади в глобальный *ТОП 10 по джобсам!*\n\n" 
         "Да начнётся коллекция!",
         parse_mode=ParseMode.MARKDOWN
     )
@@ -189,7 +189,7 @@ async def cmd_help(message: Message):
         "📋 *Команды Джоба:*\n\n"
         "/start - запустить бота\n"
         "/help - это сообщение\n"
-        "/topjobs - глобальный топ 30 по джобсам!\n"
+        "/topjobs - глобальный топ 10 по джобсам!\n"
         "/roll или Джоб дай карту - получить случайную карту (раз в 4 часа)\n"
         "/mycards или Джоб мои карты - показать коллекцию\n"
         "/jobs или Джоб мой баланс - сколько джобсов накопилось"
@@ -271,12 +271,12 @@ async def top_jobs(message: Message):
                 SELECT username, total_jobs FROM users
                 WHERE total_jobs > 0
                 ORDER BY total_jobs DESC
-                LIMIT 30
+                LIMIT 10
             ''').fetchall()
         if not rows:
             await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
             return
-        text = "🏆 <b>Топ 30 по джобсам:</b>\n\n"
+        text = "🏆 <b>Топ 10 по джобсам:</b>\n\n"
         medals = {1:"🥇",2:"🥈",3:"🥉",4:"4️⃣",5:"5️⃣",6:"6️⃣",7:"7️⃣",8:"8️⃣",9:"9️⃣",10:"🔟"}
         for i, row in enumerate(rows, 1):
             raw_username = row["username"]
