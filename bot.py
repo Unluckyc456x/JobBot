@@ -72,17 +72,17 @@ def init_db():
             ("Королева Мэйв", "The Boys", "legendary", "https://i.postimg.cc/zBP4nRvP/IMG-20260612-221045-477.jpg", "Хватит притворяться, Хоумлендер.", 1636),
             ("Джесси Пинкман", "Breaking Bad", "legendary", "https://i.postimg.cc/CLvnbhs1/IMG-20260612-221039-831.jpg", "Наука, bitch!", 1455),
             ("Тринити-киллер", "Dexter", "legendary", "https://i.postimg.cc/vHmLJSPf/IMG-20260612-221053-114.jpg", "Всё кончено, Декстер.", 800),
-            ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/GpTXZSmW/IMG-20260612-221045-610.jpg", "Позвоните Солу!", 1321),
+            ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/KzswbyDB/IMG-20260612-221045-610.jpg", "Позвоните Солу!", 1321),
             ("Уилл Грэм", "Hannibal", "legendary", "https://i.postimg.cc/rmc5Qh0W/IMG-20260612-221053-281.jpg", "Это красиво.", 1111),
             ("Энни (Старлайт)", "The Boys", "epic", "https://i.postimg.cc/SRV0Jt8d/IMG-20260612-221052-889.jpg", "Я верю в добро, даже если его почти не осталось.", 609),
             ("Дебра Морган", "Dexter", "epic", "https://i.postimg.cc/TYvCBczN/IMG-20260612-221039-420.jpg", "Ты мне отвратителен, но я люблю тебя, брат.", 512),
             ("Кристофер Молтисанти", "The Sopranos", "epic", "https://i.postimg.cc/ZRCJtmdz/IMG-20260612-221045-723.jpg", "Моя судьба — кино, а не это дерьмо.", 464),
-            ("Ким Уэкслер", "Better Call Saul", "epic", "https://i.postimg.cc/rs7XLtLG/IMG-20260612-221045-353.jpg", "Ты в деле, Сол.", 400),
+            ("Ким Уэкслер", "Better Call Saul", "epic", "https://i.postimg.cc/NFS36wKZ/IMG-20260612-221045-353.jpg", "Ты в деле, Сол.", 400),
             ("Гус Фринг", "Breaking Bad", "epic", "https://i.postimg.cc/7LKRkT3D/IMG-20260612-221039-593.jpg", "Всё, что я делаю, я делаю для бизнеса.", 444),
             ("Депп", "The Boys", "rare", "https://i.postimg.cc/52RvW4X7/IMG-20260612-221039-607.jpg", "Меня никто не уважает… даже осьминог.", 277),
             ("Сержант Докс", "Dexter", "rare", "https://i.postimg.cc/dtJSLB5Q/IMG-20260612-221045-533.jpg", "Я узнаю убийцу, когда вижу его.", 400),
             ("Поли Уолнатс", "The Sopranos", "rare", "https://i.postimg.cc/hvLwNZMb/IMG-20260612-221045-287.jpg", "Что ты там говоришь?", 217),
-            ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/R00BKmG0/IMG-20260612-221044-998.jpg", "Расскажи это снова.", 389),
+            ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/7hRkK2Wt/IMG-20260612-221044-998.jpg", "Расскажи это снова.", 389),
             ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://i.postimg.cc/bNTYtm8M/IMG-20260612-221052-912.jpg", "Я найду тебя, Хайзенберг.", 323),
             ("Эбигейл Хоббс", "Hannibal", "rare", "https://i.postimg.cc/02cxQrdt/IMG-20260612-221053-261.jpg", "Я не хотела этого.", 247),
             ("Ханна Маккей", "Dexter", "uncommon", "https://i.postimg.cc/bwxJ3qQ0/IMG-20260612-221052-516.jpg", "Мы созданы друг для друга, Декстер.", 167),
@@ -187,12 +187,12 @@ async def cmd_start(message: Message):
 async def cmd_help(message: Message):
     text = (
         "📋 *Команды Джоба:*\n\n"
-        "/start — запустить бота\n"
-        "/help — это сообщение\n"
-        "/topjobs — глобальный топ 30 по джобсам!\n"
-        "/roll или Джоб дай карту — получить случайную карту (раз в 4 часа)\n"
-        "/mycards или Джоб мои карты — показать коллекцию\n"
-        "/jobs или Джоб мой баланс — сколько джобсов накопилось"
+        "/start - запустить бота\n"
+        "/help - это сообщение\n"
+        "/topjobs - глобальный топ 30 по джобсам!\n"
+        "/roll или Джоб дай карту - получить случайную карту (раз в 4 часа)\n"
+        "/mycards или Джоб мои карты - показать коллекцию\n"
+        "/jobs или Джоб мой баланс - сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.MARKDOWN)
 
