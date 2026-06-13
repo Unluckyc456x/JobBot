@@ -11,19 +11,19 @@ from aiogram.enums import ParseMode
 from flask import Flask
 from threading import Thread
 
-# === Мини вебсервер для Render ===
+# === Мини-вебсервер для Render (отдельный поток, не мешает polling) ===
 app_web = Flask('')
 
 @app_web.route('/')
 def home():
     return "Бот Джоб работает"
 
-def run():
+def run_web():
     port = int(os.environ.get('PORT', 5000))
-    app_web.run(host='0.0.0.0', port=port)
+    app_web.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 def keep_alive():
-    t = Thread(target=run)
+    t = Thread(target=run_web, daemon=True)
     t.start()
 # ========================================================
 
@@ -185,7 +185,6 @@ async def cmd_help(message: Message):
 
 @dp.message(Command("roll"))
 async def roll_card(message: Message):
-    print("DEBUG: /roll команда вызвана")
     user_id = message.from_user.id
     register_user(user_id, message.from_user.username or "no_name")
     ok, rem = can_roll(user_id)
@@ -206,7 +205,6 @@ async def roll_card(message: Message):
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.MARKDOWN)
     except Exception as e:
-        print(f"Ошибка отправки фото: {e}")
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(Command("mycards"))
@@ -280,18 +278,16 @@ async def top_jobs(message: Message):
 
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
-    print("DEBUG: текстовая команда получена")
     user_id = message.from_user.id
     text = normalize_text(message.text)
     if text in ["джоб дай карту", "джоб дай карту!", "джоб, дай карту"] or text.startswith("джоб дай карту"):
-        print("DEBUG: сработала фраза 'джоб дай карту'")
         await roll_card(message)
     elif text in ["джоб мои карты", "джоб, мои карты", "джоб мои карты!"]:
         await my_cards(message)
     elif text in ["джоб мой баланс", "джоб, мой баланс", "джоб мой баланс!"]:
         await show_balance(message)
 
-# ========== АДМИН КОМАНДЫ только для меня ==========
+# ========== АДМИН-КОМАНДЫ ==========
 ADMIN_ID = 6990974323
 
 @dp.message(Command("give_jobs"))
@@ -327,7 +323,7 @@ async def give_card(message: Message):
         await message.answer("❌ Используй: /give_card @username название_карты")
         return
     target_username = args[1].lstrip('@')
-    card_name = ' '.join(args[2:])
+    card_name = ' '.join(args[2:]).strip().lower()
     with get_db() as conn:
         cur = conn.execute("SELECT user_id, username FROM users WHERE username = ?", (target_username,))
         user = cur.fetchone()
@@ -335,27 +331,18 @@ async def give_card(message: Message):
             await message.answer(f"❌ Пользователь @{target_username} не найден.")
             return
         target_id = user["user_id"]
-        cur = conn.execute("SELECT * FROM cards WHERE name = ?", (card_name,))
+        cur = conn.execute("SELECT * FROM cards WHERE LOWER(name) = ?", (card_name,))
         card = cur.fetchone()
         if not card:
-            cur = conn.execute("SELECT * FROM cards WHERE name LIKE ?", (f"%{card_name}%",))
+            cur = conn.execute("SELECT * FROM cards WHERE LOWER(name) LIKE ?", (f"%{card_name}%",))
             card = cur.fetchone()
             if not card:
                 await message.answer(f"❌ Карта «{card_name}» не найдена.")
                 return
         card_dict = dict(card)
         now = datetime.now()
-        conn.execute("""
-            INSERT INTO user_cards (user_id, card_id, count)
-            VALUES (?, ?, 1)
-            ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1
-        """, (target_id, card_dict["card_id"]))
-        conn.execute("""
-            UPDATE users
-            SET total_cards = total_cards + 1,
-                total_jobs = total_jobs + ?
-            WHERE user_id = ?
-        """, (card_dict["jobs_award"], target_id))
+        conn.execute("INSERT INTO user_cards (user_id, card_id, count) VALUES (?, ?, 1) ON CONFLICT(user_id, card_id) DO UPDATE SET count = count + 1", (target_id, card_dict["card_id"]))
+        conn.execute("UPDATE users SET total_cards = total_cards + 1, total_jobs = total_jobs + ? WHERE user_id = ?", (card_dict["jobs_award"], target_id))
         rarity_ru = {"common":"Простая","uncommon":"Необычная","rare":"Редкая","epic":"Эпическая","legendary":"Легендарная","mythic":"Мифическая","null":"Null"}
         caption = (
             f"🃏 *Админ-разработчик бота Джоб лично выдал карту* «{card_dict['name']} ({card_dict['series']})» пользователю @{target_username} 🃏\n"
@@ -364,8 +351,6 @@ async def give_card(message: Message):
             f"«{card_dict['quote']}»"
         )
         await message.answer(caption, parse_mode=ParseMode.MARKDOWN)
-        if target_id == ADMIN_ID:
-            await message.answer("(*Разработчик сам выдал карту самому себе* 👑)")
 
 @dp.message(Command("reset_user"))
 async def reset_user(message: Message):
@@ -384,14 +369,8 @@ async def reset_user(message: Message):
             return
         target_id = user["user_id"]
         conn.execute("DELETE FROM user_cards WHERE user_id = ?", (target_id,))
-        conn.execute("""
-            UPDATE users
-            SET total_cards = 0, total_jobs = 0, last_roll = NULL, roll_count = 0
-            WHERE user_id = ?
-        """, (target_id,))
+        conn.execute("UPDATE users SET total_cards = 0, total_jobs = 0, last_roll = NULL, roll_count = 0 WHERE user_id = ?", (target_id,))
         await message.answer(f"✅ Прогресс пользователя @{target_username} полностью сброшен.")
-        if target_id == ADMIN_ID:
-            await message.answer("🔄 Твой прогресс сброшен.")
 # ===============================================
 
 async def main():
