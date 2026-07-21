@@ -30,46 +30,63 @@ def keep_alive():
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 6990974323  # Твой Telegram ID
-LOG_CHAT_ID = -5336201694  # ID твоей приватной группы с логами
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# База карт
+# Автоматический дефолтный список карт для заполнения базы Supabase
 CARDS_DATA = [
-    {"card_id": "1", "name": "Хоумлендер", "series": "The Boys", "rarity": "null", "image_url": "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "quote": "Я здесь бог.", "jobs_award": 3333},
-    {"card_id": "2", "name": "Мясник", "series": "The Boys", "rarity": "mythic", "image_url": "https://i.postimg.cc/pdb7CH2M/IMG-20260612-221039-579.jpg", "quote": "Мы спасём эту чёртову страну!", "jobs_award": 2332},
-    {"card_id": "3", "name": "Декстер Морган", "series": "Dexter", "rarity": "mythic", "image_url": "https://i.postimg.cc/tgczkddt/IMG-20260612-221039-343.jpg", "quote": "Сегодня ночью — охота.", "jobs_award": 1777},
-    {"card_id": "4", "name": "Тони Сопрано", "series": "The Sopranos", "rarity": "mythic", "image_url": "https://i.postimg.cc/NM7kthqK/IMG-20260612-221045-473.jpg", "quote": "Я пришёл за утками.", "jobs_award": 1919},
-    {"card_id": "5", "name": "Ганнибал Лектер", "series": "Hannibal", "rarity": "mythic", "image_url": "https://i.postimg.cc/Dzn6myv5/IMG-20260612-221039-738.jpg", "quote": "Печень — с бобами.", "jobs_award": 2700},
-    {"card_id": "6", "name": "Хайзенберг", "series": "Breaking Bad", "rarity": "mythic", "image_url": "https://i.postimg.cc/gJknx1L6/IMG-20260612-221052-546.jpg", "quote": "Я — тот, кто стучит.", "jobs_award": 2500},
-    {"card_id": "7", "name": "Королева Мэйв", "series": "The Boys", "rarity": "legendary", "image_url": "https://i.postimg.cc/zBP4nRvP/IMG-20260612-221045-477.jpg", "quote": "Хватит притворяться, Хоумлендер.", "jobs_award": 1636},
-    {"card_id": "8", "name": "Джесси Пинкман", "series": "Breaking Bad", "rarity": "legendary", "image_url": "https://i.postimg.cc/CLvnbhs1/IMG-20260612-221039-831.jpg", "quote": "Наука, bitch!", "jobs_award": 1455},
-    {"card_id": "9", "name": "Тринити-киллер", "series": "Dexter", "rarity": "legendary", "image_url": "https://i.postimg.cc/vHmLJSPf/IMG-20260612-221053-114.jpg", "quote": "Всё кончено, Декстер.", "jobs_award": 800},
-    {"card_id": "10", "name": "Сол Гудман", "series": "Better Call Saul", "rarity": "legendary", "image_url": "https://i.postimg.cc/KzswbyDB/IMG-20260612-221045-610.jpg", "quote": "Позвоните Солу!", "jobs_award": 1321},
-    {"card_id": "11", "name": "Уилл Грэм", "series": "Hannibal", "rarity": "legendary", "image_url": "https://i.postimg.cc/rmc5Qh0W/IMG-20260612-221053-281.jpg", "quote": "Это красиво.", "jobs_award": 1111},
-    {"card_id": "12", "name": "Энни (Старлайт)", "series": "The Boys", "rarity": "epic", "image_url": "https://i.postimg.cc/SRV0Jt8d/IMG-20260612-221052-889.jpg", "quote": "Я верю в добро, даже если его почти не осталось.", "jobs_award": 609},
-    {"card_id": "13", "name": "Дебра Морган", "series": "Dexter", "rarity": "epic", "image_url": "https://i.postimg.cc/TYvCBczN/IMG-20260612-221039-420.jpg", "quote": "Ты мне отвратителен, но я люблю тебя, брат.", "jobs_award": 512},
-    {"card_id": "14", "name": "Кристофер Молтисанти", "series": "The Sopranos", "rarity": "epic", "image_url": "https://i.postimg.cc/ZRCJtmdz/IMG-20260612-221045-723.jpg", "quote": "Моя судьба — кино, а не это дерьмо.", "jobs_award": 464},
-    {"card_id": "15", "name": "Ким Уэкслер", "series": "Better Call Saul", "rarity": "epic", "image_url": "https://i.postimg.cc/NFS36wKZ/IMG-20260612-221045-353.jpg", "quote": "Ты в деле, Сол.", "jobs_award": 400},
-    {"card_id": "16", "name": "Гус Фринг", "series": "Breaking Bad", "rarity": "epic", "image_url": "https://i.postimg.cc/7LKRkT3D/IMG-20260612-221039-593.jpg", "quote": "Всё, что я делаю, я делаю для бизнеса.", "jobs_award": 444},
-    {"card_id": "17", "name": "Депп", "series": "The Boys", "rarity": "rare", "image_url": "https://i.postimg.cc/52RvW4X7/IMG-20260612-221039-607.jpg", "quote": "Меня никто не уважает… даже осьминог.", "jobs_award": 277},
-    {"card_id": "18", "name": "Сержант Докс", "series": "Dexter", "rarity": "rare", "image_url": "https://i.postimg.cc/dtJSLB5Q/IMG-20260612-221045-533.jpg", "quote": "Я узнаю убийцу, когда вижу его.", "jobs_award": 400},
-    {"card_id": "19", "name": "Поли Уолнатс", "series": "The Sopranos", "rarity": "rare", "image_url": "https://i.postimg.cc/hvLwNZMb/IMG-20260612-221045-287.jpg", "quote": "Что ты там говоришь?", "jobs_award": 217},
-    {"card_id": "20", "name": "Лало Саламанка", "series": "Better Call Saul", "rarity": "rare", "image_url": "https://i.postimg.cc/7hRkK2Wt/IMG-20260612-221044-998.jpg", "quote": "Расскажи это снова.", "jobs_award": 389},
-    {"card_id": "21", "name": "Хэнк Шрейдер", "series": "Breaking Bad", "rarity": "rare", "image_url": "https://i.postimg.cc/bNTYtm8M/IMG-20260612-221052-912.jpg", "quote": "Я найду тебя, Хайзенберг.", "jobs_award": 323},
-    {"card_id": "22", "name": "Эбигейл Хоббс", "series": "Hannibal", "rarity": "rare", "image_url": "https://i.postimg.cc/02cxQrdt/IMG-20260612-221053-261.jpg", "quote": "Я не хотела этого.", "jobs_award": 247},
-    {"card_id": "23", "name": "Ханна Маккей", "series": "Dexter", "rarity": "uncommon", "image_url": "https://i.postimg.cc/bwxJ3qQ0/IMG-20260612-221052-516.jpg", "quote": "Мы созданы друг для друга, Декстер.", "jobs_award": 167},
-    {"card_id": "24", "name": "Кармела Сопрано", "series": "The Sopranos", "rarity": "uncommon", "image_url": "https://i.postimg.cc/63YtF333/IMG-20260612-221039-861.jpg", "quote": "Я знаю, кто ты, Тони.", "jobs_award": 111},
-    {"card_id": "25", "name": "Майк Эрмантраут", "series": "Better Call Saul", "rarity": "uncommon", "image_url": "https://i.postimg.cc/Dwvk3h96/IMG-20260612-221045-690.jpg", "quote": "Я просчитываю каждый шаг.", "jobs_award": 129},
-    {"card_id": "26", "name": "Тодд Алкист", "series": "Breaking Bad", "rarity": "uncommon", "image_url": "https://i.postimg.cc/MKstX8cF/IMG-20260612-221045-373.jpg", "quote": "Ничего личного.", "jobs_award": 100},
-    {"card_id": "27", "name": "Французик", "series": "The Boys", "rarity": "common", "image_url": "https://i.postimg.cc/tTXVhYwd/IMG-20260612-221052-794.jpg", "quote": "Я люблю этот мир, но он не любит меня.", "jobs_award": 100},
-    {"card_id": "28", "name": "Винс Масука", "series": "Dexter", "rarity": "common", "image_url": "https://i.postimg.cc/nLJR7GkM/IMG-20260612-221039-163.jpg", "quote": "Это отличный день, чтобы быть живым!", "jobs_award": 69},
-    {"card_id": "29", "name": "Дядя Джуниор", "series": "The Sopranos", "rarity": "common", "image_url": "https://i.postimg.cc/R0w0p4Kf/IMG-20260612-221039-310.jpg", "quote": "У тебя никогда не было яиц.", "jobs_award": 55},
-    {"card_id": "30", "name": "Чак Макгилл", "series": "Better Call Saul", "rarity": "common", "image_url": "https://i.postimg.cc/B6H4QgMK/IMG-20260612-221052-846.jpg", "quote": "Люди не меняются.", "jobs_award": 50}
+    ("Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
+    ("Мясник", "The Boys", "mythic", "https://i.postimg.cc/pdb7CH2M/IMG-20260612-221039-579.jpg", "Мы спасём эту чёртову страну!", 2332),
+    ("Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/tgczkddt/IMG-20260612-221039-343.jpg", "Сегодня ночью — охота.", 1777),
+    ("Тони Сопрано", "The Sopranos", "mythic", "https://i.postimg.cc/NM7kthqK/IMG-20260612-221045-473.jpg", "Я пришёл за утками.", 1919),
+    ("Ганнибал Лектер", "Hannibal", "mythic", "https://i.postimg.cc/Dzn6myv5/IMG-20260612-221039-738.jpg", "Печень — с бобами.", 2700),
+    ("Хайзенберг", "Breaking Bad", "mythic", "https://i.postimg.cc/gJknx1L6/IMG-20260612-221052-546.jpg", "Я — тот, кто стучит.", 2500),
+    ("Королева Мэйв", "The Boys", "legendary", "https://i.postimg.cc/zBP4nRvP/IMG-20260612-221045-477.jpg", "Хватит притворяться, Хоумлендер.", 1636),
+    ("Джесси Пинкман", "Breaking Bad", "legendary", "https://i.postimg.cc/CLvnbhs1/IMG-20260612-221039-831.jpg", "Наука, bitch!", 1455),
+    ("Тринити-киллер", "Dexter", "legendary", "https://i.postimg.cc/vHmLJSPf/IMG-20260612-221053-114.jpg", "Всё кончено, Декстер.", 800),
+    ("Сол Гудман", "Better Call Saul", "legendary", "https://i.postimg.cc/KzswbyDB/IMG-20260612-221045-610.jpg", "Позвоните Солу!", 1321),
+    ("Уилл Грэм", "Hannibal", "legendary", "https://i.postimg.cc/rmc5Qh0W/IMG-20260612-221053-281.jpg", "Это красиво.", 1111),
+    ("Энни (Старлайт)", "The Boys", "epic", "https://i.postimg.cc/SRV0Jt8d/IMG-20260612-221052-889.jpg", "Я верю в добро, даже если его почти не осталось.", 609),
+    ("Дебра Морган", "Dexter", "epic", "https://i.postimg.cc/TYvCBczN/IMG-20260612-221039-420.jpg", "Ты мне отвратителен, но я люблю тебя, брат.", 512),
+    ("Кристофер Молтисанти", "The Sopranos", "epic", "https://i.postimg.cc/ZRCJtmdz/IMG-20260612-221045-723.jpg", "Моя судьба — кино, а не это дерьмо.", 464),
+    ("Ким Уэкслер", "Better Call Saul", "epic", "https://i.postimg.cc/NFS36wKZ/IMG-20260612-221045-353.jpg", "Ты в деле, Сол.", 400),
+    ("Гус Фринг", "Breaking Bad", "epic", "https://i.postimg.cc/7LKRkT3D/IMG-20260612-221039-593.jpg", "Всё, что я делаю, я делаю для бизнеса.", 444),
+    ("Депп", "The Boys", "rare", "https://i.postimg.cc/52RvW4X7/IMG-20260612-221039-607.jpg", "Меня никто не уважает… даже осьминог.", 277),
+    ("Сержант Докс", "Dexter", "rare", "https://i.postimg.cc/dtJSLB5Q/IMG-20260612-221045-533.jpg", "Я узнаю убийцу, когда вижу его.", 400),
+    ("Поли Уолнатс", "The Sopranos", "rare", "https://i.postimg.cc/hvLwNZMb/IMG-20260612-221045-287.jpg", "Что ты там говоришь?", 217),
+    ("Лало Саламанка", "Better Call Saul", "rare", "https://i.postimg.cc/7hRkK2Wt/IMG-20260612-221044-998.jpg", "Расскажи это снова.", 389),
+    ("Хэнк Шрейдер", "Breaking Bad", "rare", "https://i.postimg.cc/bNTYtm8M/IMG-20260612-221052-912.jpg", "Я найду тебя, Хайзенберг.", 323),
+    ("Эбигейл Хоббс", "Hannibal", "rare", "https://i.postimg.cc/02cxQrdt/IMG-20260612-221053-261.jpg", "Я не хотела этого.", 247),
+    ("Ханна Маккей", "Dexter", "uncommon", "https://i.postimg.cc/bwxJ3qQ0/IMG-20260612-221052-516.jpg", "Мы созданы друг для друга, Декстер.", 167),
+    ("Кармела Сопрано", "The Sopranos", "uncommon", "https://i.postimg.cc/63YtF333/IMG-20260612-221039-861.jpg", "Я знаю, кто ты, Тони.", 111),
+    ("Майк Эрмантраут", "Better Call Saul", "uncommon", "https://i.postimg.cc/Dwvk3h96/IMG-20260612-221045-690.jpg", "Я просчитываю каждый шаг.", 129),
+    ("Тодд Алкист", "Breaking Bad", "uncommon", "https://i.postimg.cc/MKstX8cF/IMG-20260612-221045-373.jpg", "Ничего личного.", 100),
+    ("Французик", "The Boys", "common", "https://i.postimg.cc/tTXVhYwd/IMG-20260612-221052-794.jpg", "Я люблю этот мир, но он не любит меня.", 100),
+    ("Винс Масука", "Dexter", "common", "https://i.postimg.cc/nLJR7GkM/IMG-20260612-221039-163.jpg", "Это отличный день, чтобы быть живым!", 69),
+    ("Дядя Джуниор", "The Sopranos", "common", "https://i.postimg.cc/R0w0p4Kf/IMG-20260612-221039-310.jpg", "У тебя никогда не было яиц.", 55),
+    ("Чак Макгилл", "Better Call Saul", "common", "https://i.postimg.cc/B6H4QgMK/IMG-20260612-221052-846.jpg", "Люди не меняются.", 50),
 ]
+
+def init_supabase():
+    try:
+        res = supabase.table("cards").select("id", count="exact").execute()
+        if res.count == 0 or res.count is None:
+            rows = []
+            for name, series, rarity, img, quote, award in CARDS_DATA:
+                rows.append({
+                    "card_name": name,
+                    "series": series,
+                    "rarity": rarity,
+                    "image_url": img,
+                    "quote": quote,
+                    "jobs_award": award
+                })
+            supabase.table("cards").insert(rows).execute()
+    except Exception as e:
+        print(f"Ошибка инициализации карт: {e}")
 
 RARITY_CHANCES = {"common":0.44, "uncommon":0.22, "rare":0.15, "epic":0.10, "legendary":0.05, "mythic":0.03, "null":0.01}
 RARITY_EMOJI = {"common":"⚪", "uncommon":"🟢", "rare":"🔵", "epic":"🟣", "legendary":"🟠", "mythic":"🔴", "null":"⚫"}
@@ -86,24 +103,29 @@ def register_user(user_id, username):
         supabase.table("users").insert({
             "user_id": user_id,
             "username": username,
+            "jobs_balance": 0,
             "is_frozen": False,
-            "jobs_balance": 0
+            "is_banned": False
         }).execute()
     else:
         supabase.table("users").update({"username": username}).eq("user_id", user_id).execute()
 
 def is_user_blocked(user_id):
-    res = supabase.table("users").select("is_frozen").eq("user_id", user_id).execute()
+    res = supabase.table("users").select("is_frozen, is_banned").eq("user_id", user_id).execute()
     if res.data:
-        return res.data[0].get("is_frozen", False)
+        row = res.data[0]
+        if row.get("is_frozen") or row.get("is_banned"):
+            return True
     return False
 
 def freeze_user(user_id, reason):
-    supabase.table("users").update({"is_frozen": True}).eq("user_id", user_id).execute()
+    now = datetime.now(timezone.utc).isoformat()
+    supabase.table("users").update({"is_frozen": True, "freeze_reason": reason}).eq("user_id", user_id).execute()
     supabase.table("spam_logs").insert({
         "user_id": user_id,
-        "action_taken": f"Auto-Frozen ({reason})",
-        "triggers_count": 1
+        "created_at": now,
+        "action_taken": "Auto-Frozen",
+        "reason": reason
     }).execute()
 
 async def check_antispam(message: Message, bot: Bot) -> bool:
@@ -131,7 +153,7 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
             InlineKeyboardButton(text="⛔ Забанить", callback_data=f"ban:{user_id}")
         ]])
         await bot.send_message(
-            LOG_CHAT_ID, 
+            ADMIN_ID, 
             f"🚨 <b>АНТИСПАМ (Tier 2):</b> Игрок @{html.escape(message.from_user.username or 'без ника')} (ID: <code>{user_id}</code>) заморожен!\n"
             f"Причина: 7+ запросов за 5 секунд.",
             parse_mode=ParseMode.HTML,
@@ -146,7 +168,7 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
             InlineKeyboardButton(text="⛔ Забанить", callback_data=f"ban:{user_id}")
         ]])
         await bot.send_message(
-            LOG_CHAT_ID, 
+            ADMIN_ID, 
             f"🚨 <b>АНТИСПАМ (Tier 3):</b> Игрок @{html.escape(message.from_user.username or 'без ника')} (ID: <code>{user_id}</code>) заморожен!\n"
             f"Причина: Повтор команды <i>'{html.escape(cmd_text)}'</i> 10 раз за 10 минут.",
             parse_mode=ParseMode.HTML,
@@ -182,12 +204,16 @@ def get_random_card(roll_count):
                 chosen = rarity
                 break
 
-    matching_cards = [c for c in CARDS_DATA if c["rarity"] == chosen]
-    return random.choice(matching_cards if matching_cards else CARDS_DATA)
+    res = supabase.table("cards").select("*").eq("rarity", chosen).execute()
+    if res.data:
+        return random.choice(res.data)
+    else:
+        res = supabase.table("cards").select("*").execute()
+        return random.choice(res.data)
 
 def can_roll(user_id):
     res = supabase.table("users").select("last_roll_time").eq("user_id", user_id).execute()
-    if not res.data or not res.data[0]["last_roll_time"]:
+    if not res.data or not res.data[0].get("last_roll_time"):
         return True, None
     last = datetime.fromisoformat(res.data[0]["last_roll_time"])
     now = datetime.now(timezone.utc)
@@ -197,19 +223,24 @@ def can_roll(user_id):
     return False, f"{remaining.seconds // 3600} ч {(remaining.seconds % 3600) // 60} мин"
 
 def give_card_to_user(user_id, card, now):
+    user_res = supabase.table("users").select("jobs_balance").eq("user_id", user_id).execute()
+    current_balance = user_res.data[0].get("jobs_balance") or 0 if user_res.data else 0
+    
+    # Регистрируем карту
+    card_id_val = str(card.get("id") or card.get("card_id") or card.get("card_name"))
+    card_name_val = card.get("card_name") or card.get("name")
+    
     supabase.table("user_cards").insert({
         "user_id": user_id, 
-        "card_id": str(card["card_id"]), 
-        "card_name": card["name"],
-        "rarity": card["rarity"]
+        "card_id": card_id_val, 
+        "card_name": card_name_val,
+        "rarity": card.get("rarity"),
+        "obtained_at": now.isoformat()
     }).execute()
 
-    user_res = supabase.table("users").select("jobs_balance").eq("user_id", user_id).execute()
-    curr_jobs = user_res.data[0].get("jobs_balance", 0) or 0 if user_res.data else 0
-
     supabase.table("users").update({
-        "last_roll_time": now.isoformat(),
-        "jobs_balance": curr_jobs + card.get("jobs_award", 0)
+        "jobs_balance": current_balance + card.get("jobs_award", 100),
+        "last_roll_time": now.isoformat()
     }).eq("user_id", user_id).execute()
 
 def get_mycards_keyboard(user_id, page_idx):
@@ -238,7 +269,10 @@ async def cmd_start(message: Message):
         "Меня зовут <b>Джоб</b>, и я помогаю собирать карты легендарных персонажей.\n\n"
         "🎴 <b>Как играть:</b>\n"
         "• Каждые 2 часа проси у меня карту: «<b>Джоб дай карту</b>»\n"
-        "• Смотри свою коллекцию: «<b>Джоб мои карты</b>»\n\n"
+        "• Смотри свою коллекцию: «<b>Джоб мои карты</b>»\n"
+        "• Узнавай баланс джобсов: «<b>Джоб мой баланс</b>»\n\n"
+        "💰 Джобсы пригодятся в будущем магазине. А пока просто копи.\n\n"
+        "🏆 Попади в глобальный <b>ТОП 30 по джобсам!</b>\n\n" 
         "Да начнётся коллекция!",
         parse_mode=ParseMode.HTML
     )
@@ -250,8 +284,10 @@ async def cmd_help(message: Message):
         "📋 <b>Команды Джоба:</b>\n\n"
         "/start - запустить бота\n"
         "/help - это сообщение\n"
+        "/topjobs - глобальный топ 30 по джобсам!\n"
         "/roll или Джоб дай карту - получить случайную карту (раз в 2 часа)\n"
-        "/mycards или Джоб мои карты - показать коллекцию"
+        "/mycards или Джоб мои карты - показать коллекцию\n"
+        "/jobs или Джоб мой баланс - сколько джобсов накопилось"
     )
     await message.answer(text, parse_mode=ParseMode.HTML)
 
@@ -265,14 +301,20 @@ async def roll_card(message: Message):
         await message.answer(f"⏳ У Джоба больше нет карт сейчас для вас, отдыхайте, но приходите через ({rem})")
         return
     
-    card = get_random_card(0)
+    cards_cnt_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", user_id).execute()
+    roll_cnt = cards_cnt_res.count or 0
+    
+    card = get_random_card(roll_cnt)
     give_card_to_user(user_id, card, datetime.now(timezone.utc))
     
+    c_name = card.get('card_name') or card.get('name')
+    c_series = card.get('series', 'Сериал')
+    
     caption = (
-        f"🃏 <b>Джоб достаёт карту «{html.escape(card['name'])} ({html.escape(card['series'])})»</b> 🃏\n"
+        f"🃏 <b>Джоб достаёт карту «{html.escape(c_name)} ({html.escape(c_series)})»</b> 🃏\n"
         f"✨ Редкость: {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]} ✨\n"
-        f"💰 Джобсы: +{card['jobs_award']} 💰\n"
-        f"<i>«{html.escape(card['quote'])}»</i>"
+        f"💰 Джобсы: +{card.get('jobs_award', 100)} 💰\n"
+        f"<i>«{html.escape(card.get('quote', ''))}»</i>"
     )
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.HTML)
@@ -286,7 +328,8 @@ async def my_cards(message: Message):
 
 async def render_mycards_page(user_id, message_or_cb, page_idx=0):
     rarity = RARITY_ORDER[page_idx]
-    cards_res = supabase.table("user_cards").select("*").eq("user_id", user_id).execute()
+    
+    cards_res = supabase.table("user_cards").select("card_name, rarity").eq("user_id", user_id).execute()
     
     filtered_cards = defaultdict(int)
     total_cards = 0
@@ -305,8 +348,8 @@ async def render_mycards_page(user_id, message_or_cb, page_idx=0):
     if not filtered_cards:
         msg_text += "<i>В этой категории у тебя пока нет карт.</i>"
     else:
-        for name, count in sorted(filtered_cards.items()):
-            msg_text += f"• <b>{html.escape(name)}</b> — <b>{count} шт.</b>\n"
+        for name, cnt in sorted(filtered_cards.items()):
+            msg_text += f"• <b>{html.escape(name)}</b> — <b>{cnt} шт.</b>\n"
 
     kb = get_mycards_keyboard(user_id, page_idx)
 
@@ -328,6 +371,32 @@ async def mycards_callback(cb: CallbackQuery):
 async def noop_callback(cb: CallbackQuery):
     await cb.answer()
 
+@dp.message(Command("jobs"))
+async def show_balance(message: Message):
+    if await check_antispam(message, bot): return
+    res = supabase.table("users").select("jobs_balance").eq("user_id", message.from_user.id).execute()
+    jobs = res.data[0].get("jobs_balance") or 0 if res.data else 0
+    await message.answer(f"💰 Джоб пересчитал твои заначки: <b>{jobs}</b> джобсов. Потрать их с умом (В будущем).", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("topjobs"))
+async def top_jobs(message: Message):
+    if await check_antispam(message, bot): return
+    try:
+        res = supabase.table("users").select("username, jobs_balance").gt("jobs_balance", 0).eq("is_banned", False).order("jobs_balance", desc=True).limit(30).execute()
+        if not res.data:
+            await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
+            return
+        text = "🏆 <b>Топ 30 по джобсам:</b>\n\n"
+        medals = {1:"🥇",2:"🥈",3:"🥉"}
+        for i, row in enumerate(res.data, 1):
+            raw_username = row.get("username")
+            username = "Аноним" if not raw_username or raw_username == "no_name" else html.escape(raw_username).replace("@", "")
+            medal = medals.get(i, f"{i}.")
+            text += f"{medal} <b>{username}</b> — {row.get('jobs_balance', 0)} 🪙\n"
+        await message.answer(text, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        await message.answer("⚠️ Ошибка при загрузке топа. Попробуй позже.")
+
 @dp.message(F.text & ~F.text.startswith("/"))
 async def text_commands(message: Message):
     text = message.text.strip().lower().rstrip('!.,;')
@@ -335,6 +404,8 @@ async def text_commands(message: Message):
         await roll_card(message)
     elif text in ["джоб мои карты", "джоб, мои карты"]:
         await my_cards(message)
+    elif text in ["джоб мой баланс", "джоб, мой баланс"]:
+        await show_balance(message)
 
 # ========== АДМИН-КОМАНДЫ ==========
 
@@ -359,17 +430,18 @@ async def check_user(message: Message):
         return
     
     uid = user["user_id"]
-    status = "🧊 ЗАМОРОЖЕН" if user.get("is_frozen") else "🟢 Активен"
-    jobs = user.get("jobs_balance", 0) or 0
+    status = "⛔ ЗАБАНЕН" if user.get("is_banned") else ("🧊 ЗАМОРОЖЕН" if user.get("is_frozen") else "🟢 Активен")
     
-    cards_cnt = supabase.table("user_cards").select("id", count="exact").eq("user_id", uid).execute().count or 0
-    spam_cnt = supabase.table("spam_logs").select("id", count="exact").eq("user_id", uid).execute().count or 0
+    spam_res = supabase.table("spam_logs").select("id", count="exact").eq("user_id", uid).execute()
+    spam_cnt = spam_res.count if spam_res.count else 0
+    
+    top_res = supabase.table("users").select("user_id", count="exact").gt("jobs_balance", user.get("jobs_balance", 0)).eq("is_banned", False).execute()
+    top_pos = (top_res.count or 0) + 1
 
     msg = (
         f"📋 <b>ИНСПЕКЦИЯ ПОЛЬЗОВАТЕЛЯ</b>\n──────────────────────\n"
-        f"👤 Игрок: @{html.escape(user['username'] or 'no_name')} (ID: <code>{uid}</code>)\n"
-        f"💰 Баланс: <b>{jobs}</b> джобсов\n"
-        f"🃏 Всего карт в коллекции: <b>{cards_cnt}</b> шт.\n"
+        f"👤 Игрок: @{html.escape(user.get('username') or 'no_name')} (ID: <code>{uid}</code>)\n"
+        f"💰 Баланс: <b>{user.get('jobs_balance', 0)}</b> джобсов | 🏆 Топ: #{top_pos}\n"
         f"🧊 Статус: <b>{status}</b>\n"
         f"🚨 Нарушения: <b>{spam_cnt}</b> спам-триггеров (Подробно: /logs_user {uid})"
     )
@@ -388,44 +460,16 @@ async def logs_user(message: Message):
         return
     
     uid = user["user_id"]
-    spams = supabase.table("spam_logs").select("*").eq("user_id", uid).order("id", desc=True).limit(5).execute()
+    spams = supabase.table("spam_logs").select("created_at, reason").eq("user_id", uid).order("id", desc=True).limit(5).execute()
     
-    msg = f"📊 <b>ПОЛНЫЕ ЛОГИ:</b> @{html.escape(user['username'] or 'no_name')} (ID: <code>{uid}</code>)\n──────────────────────\n\n🚨 <b>ИСТОРИЯ СПАМА:</b>\n"
+    msg = f"📊 <b>ПОЛНЫЕ ЛОГИ:</b> @{html.escape(user.get('username') or 'no_name')} (ID: <code>{uid}</code>)\n──────────────────────\n\n🚨 <b>ИСТОРИЯ СПАМА:</b>\n"
     if not spams.data:
         msg += "• Нарушений не зафиксировано.\n"
     else:
         for s in spams.data:
-            msg += f"• {s.get('created_at', 'Н/Д')} | {html.escape(s.get('action_taken', 'Спам'))}\n"
+            msg += f"• {s.get('created_at')} | {html.escape(str(s.get('reason')))}\n"
             
     await message.answer(msg, parse_mode=ParseMode.HTML)
-
-@dp.message(Command("give_jobs"))
-async def give_jobs(message: Message):
-    if message.from_user.id != ADMIN_ID: return
-    args = message.text.split()
-    if len(args) < 3:
-        await message.answer("❌ Используй: /give_jobs <id_или_username> <количество>")
-        return
-    user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    try:
-        amount = int(args[2])
-    except ValueError:
-        await message.answer("❌ Количество должно быть числом.")
-        return
-
-    uid = user["user_id"]
-    current_jobs = user.get("jobs_balance", 0) or 0
-    new_balance = current_jobs + amount
-
-    supabase.table("users").update({"jobs_balance": new_balance}).eq("user_id", uid).execute()
-    await message.answer(
-        f"💰 Пользователю @{html.escape(user['username'] or 'no_name')} начислено <b>{amount}</b> джобсов!\n"
-        f"Текущий баланс: <b>{new_balance}</b> 💰",
-        parse_mode=ParseMode.HTML
-    )
 
 @dp.message(Command("freeze"))
 async def cmd_freeze(message: Message):
@@ -434,8 +478,8 @@ async def cmd_freeze(message: Message):
     if len(args) < 2: return
     user = get_target_user(args[1])
     if user:
-        supabase.table("users").update({"is_frozen": True}).eq("user_id", user["user_id"]).execute()
-        await message.answer(f"🧊 Пользователь @{html.escape(user['username'] or 'no_name')} заморожен.", parse_mode=ParseMode.HTML)
+        supabase.table("users").update({"is_frozen": True, "freeze_reason": "Ручная заморозка админом"}).eq("user_id", user["user_id"]).execute()
+        await message.answer(f"🧊 Пользователь @{html.escape(user.get('username') or 'no_name')} заморожен.", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("unfreeze"))
 async def cmd_unfreeze(message: Message):
@@ -445,7 +489,27 @@ async def cmd_unfreeze(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"is_frozen": False}).eq("user_id", user["user_id"]).execute()
-        await message.answer(f"🔓 Пользователь @{html.escape(user['username'] or 'no_name')} разморожен.", parse_mode=ParseMode.HTML)
+        await message.answer(f"🔓 Пользователь @{html.escape(user.get('username') or 'no_name')} разморожен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("ban"))
+async def cmd_ban(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_banned": True}).eq("user_id", user["user_id"]).execute()
+        await message.answer(f"⛔ Пользователь @{html.escape(user.get('username') or 'no_name')} забанен и скрыт из ТОПа.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("unban"))
+async def cmd_unban(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_banned": False}).eq("user_id", user["user_id"]).execute()
+        await message.answer(f"✅ Пользователь @{html.escape(user.get('username') or 'no_name')} разбанен.", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("rc"))
 async def cmd_rc(message: Message):
@@ -455,7 +519,7 @@ async def cmd_rc(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"last_roll_time": None}).eq("user_id", user["user_id"]).execute()
-        await message.answer(f"⏳ Таймер ролла для @{html.escape(user['username'] or 'no_name')} сброшен.", parse_mode=ParseMode.HTML)
+        await message.answer(f"⏳ Таймер ролла для @{html.escape(user.get('username') or 'no_name')} сброшен.", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("reset_user"))
 async def reset_user(message: Message):
@@ -471,8 +535,26 @@ async def reset_user(message: Message):
     
     target_id = user["user_id"]
     supabase.table("user_cards").delete().eq("user_id", target_id).execute()
-    supabase.table("users").update({"last_roll_time": None, "jobs_balance": 0}).eq("user_id", target_id).execute()
-    await message.answer(f"✅ Прогресс карт и джобсов пользователя @{html.escape(user['username'] or 'no_name')} сброшен.", parse_mode=ParseMode.HTML)
+    supabase.table("users").update({"jobs_balance": 0, "last_roll_time": None}).eq("user_id", target_id).execute()
+    await message.answer(f"✅ Прогресс пользователя @{html.escape(user.get('username') or 'no_name')} (ID: {target_id}) полностью сброшен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("give_jobs"))
+async def give_jobs(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /give_jobs <id_или_username> <количество>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    try: amount = int(args[2])
+    except: return
+    
+    new_jobs = (user.get("jobs_balance") or 0) + amount
+    supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
+    await message.answer(f"✅ Выдано {amount} джобсов пользователю @{html.escape(user.get('username') or 'no_name')}.", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("give_card"))
 async def give_card(message: Message):
@@ -486,12 +568,14 @@ async def give_card(message: Message):
         await message.answer("❌ Пользователь не найден.")
         return
     
-    query = ' '.join(args[2:]).strip().lower()
+    query = ' '.join(args[2:]).strip()
     card = None
-    for c in CARDS_DATA:
-        if c["card_id"] == query or query in c["name"].lower():
-            card = c
-            break
+    if query.isdigit():
+        res = supabase.table("cards").select("*").eq("id", int(query)).execute()
+        card = res.data[0] if res.data else None
+    if not card:
+        res = supabase.table("cards").select("*").ilike("card_name", f"%{query}%").execute()
+        card = res.data[0] if res.data else None
     
     if not card:
         await message.answer("❌ Карта не найдена.")
@@ -499,10 +583,14 @@ async def give_card(message: Message):
     
     give_card_to_user(user["user_id"], card, datetime.now(timezone.utc))
     
+    c_name = card.get('card_name') or card.get('name')
+    c_series = card.get('series', 'Сериал')
+
     caption = (
-        f"🃏 <b>Админ лично выдал карту</b> «{html.escape(card['name'])} ({html.escape(card['series'])})» пользователю @{html.escape(user['username'] or 'no_name')} 🃏\n"
+        f"🃏 <b>Админ-разработчик бота Джоб лично выдал карту</b> «{html.escape(c_name)} ({html.escape(c_series)})» пользователю @{html.escape(user.get('username') or 'no_name')} 🃏\n"
         f"✨ Редкость: {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]} ✨\n"
-        f"<i>«{html.escape(card['quote'])}»</i>"
+        f"💰 Джобсы: +{card.get('jobs_award', 100)} 💰\n"
+        f"<i>«{html.escape(card.get('quote', ''))}»</i>"
     )
     try:
         await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.HTML)
@@ -520,17 +608,17 @@ async def cb_unfreeze(cb: CallbackQuery):
 async def cb_ban(cb: CallbackQuery):
     if cb.from_user.id != ADMIN_ID: return
     uid = int(cb.data.split(":")[1])
-    supabase.table("users").update({"is_frozen": True}).eq("user_id", uid).execute()
-    await cb.message.edit_text(cb.message.text + "\n\n⛔ <b>ПОЛЬЗОВАТЕЛЬ ЗАБАНЕН</b>", parse_mode=ParseMode.HTML)
+    supabase.table("users").update({"is_banned": True}).eq("user_id", uid).execute()
+    await cb.message.edit_text(cb.message.text + "\n\n⛔ <b>ПОЛЬЗОВАТЕЛЬ ЗАБАНЕН И СКРЫТ ИЗ ТОПА</b>", parse_mode=ParseMode.HTML)
 
 # =========================================
 
 async def main():
-    print("✅ Джоб v2.0 (FULL ADMIN & SUPABASE) запущен!")
+    init_supabase()
+    print("✅ Джоб v2.0 (Supabase Edition) успешно запущен!")
     await dp.start_polling(bot)
 
 keep_alive()
 
 if __name__ == "__main__":
     asyncio.run(main())
-
