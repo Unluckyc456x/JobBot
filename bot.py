@@ -40,7 +40,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Локальная база карт
 CARDS_DATA = [
     (1, "Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
-    (2, "Мясник", "The Boys", "mythic", "https://i.postimg.cc/pdb7CH2M/IMG-20260612-221039-579.jpg", "Мы спасём эту чёртову страну!", 2332),
+    (2, "Мясник", "The Boys", "mythic", "https://i.postimg.cc/pdb7CH2M/IMG-20260612-221039-579.jpg", "Мы спасём эту чёртовую страну!", 2332),
     (3, "Декстер Морган", "Dexter", "mythic", "https://i.postimg.cc/tgczkddt/IMG-20260612-221039-343.jpg", "Сегодня ночью — охота.", 1777),
     (4, "Тони Сопрано", "The Sopranos", "mythic", "https://i.postimg.cc/NM7kthqK/IMG-20260612-221045-473.jpg", "Я пришёл за утками.", 1919),
     (5, "Ганнибал Лектер", "Hannibal", "mythic", "https://i.postimg.cc/Dzn6myv5/IMG-20260612-221039-738.jpg", "Печень — с бобами.", 2700),
@@ -76,7 +76,7 @@ CARDS_DICT = {
     for c in CARDS_DATA
 }
 
-RARITY_CHANCES = {"common":0.44, "uncommon":0.22, "rare":0.15, "epic":0.10, "legendary":0.05, "mythic":0.03, "null":0.01}
+RARITY_CHANCES = {"common":0.55, "uncommon":0.25, "rare":0.11, "epic":0.06, "legendary":0.025, "mythic":0.013, "null":0.002}
 RARITY_EMOJI = {"common":"⚪", "uncommon":"🟢", "rare":"🔵", "epic":"🟣", "legendary":"🟠", "mythic":"🔴", "null":"⚫"}
 RARITY_RU = {"common":"Простая", "uncommon":"Необычная", "rare":"Редкая", "epic":"Эпическая", "legendary":"Легендарная", "mythic":"Мифическая", "null":"Null"}
 RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "null"]
@@ -139,19 +139,16 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
     now = datetime.now()
     cmd_text = message.text.strip().lower() if message.text else ""
 
-    # Очистка старых таймстемпов за 5 секунд
     timestamps = [t for t in user_request_timestamps[user_id] if now - t <= timedelta(seconds=5)]
     timestamps.append(now)
     user_request_timestamps[user_id] = timestamps
 
-    # Очистка истории одинаковых команд за 10 минут
     cmd_history = [(t, c) for t, c in user_command_history[user_id] if now - t <= timedelta(minutes=10)]
     cmd_history.append((now, cmd_text))
     user_command_history[user_id] = cmd_history
 
     same_cmd_count = sum(1 for t, c in cmd_history if c == cmd_text)
 
-    # Tier 2 & Tier 3
     if len(timestamps) >= 7 or same_cmd_count >= 10:
         tier_label = "Tier 2 (>7 за 5 сек)" if len(timestamps) >= 7 else f"Tier 3 (10x '{cmd_text}' за 10 мин)"
         freeze_user(user_id, tier_label)
@@ -173,21 +170,36 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
             print(f"Ошибка отправки в LOG_CHAT_ID: {e}")
         return True
 
-    # Tier 1: Бесшумный игнор (2-6 запросов за 5 сек)
     elif len(timestamps) > 1:
         return True
 
     return False
 
-def get_random_card():
-    r = random.random()
-    cum = 0
-    chosen_rarity = "common"
-    for rarity, chance in RARITY_CHANCES.items():
-        cum += chance
-        if r <= cum:
-            chosen_rarity = rarity
-            break
+def get_random_card(total_user_rolls=0):
+    # Защита для новичков: первые 3 ролла не могут выдать мифические (mythic) и null карты
+    if total_user_rolls < 3:
+        allowed_rarities = ["common", "uncommon", "rare", "epic", "legendary"]
+        sub_chances = {r: RARITY_CHANCES[r] for r in allowed_rarities}
+        total_weight = sum(sub_chances.values())
+        norm_chances = {r: w / total_weight for r, w in sub_chances.items()}
+        
+        r = random.random()
+        cum = 0
+        chosen_rarity = "common"
+        for rarity, chance in norm_chances.items():
+            cum += chance
+            if r <= cum:
+                chosen_rarity = rarity
+                break
+    else:
+        r = random.random()
+        cum = 0
+        chosen_rarity = "common"
+        for rarity, chance in RARITY_CHANCES.items():
+            cum += chance
+            if r <= cum:
+                chosen_rarity = rarity
+                break
 
     matching_cards = [c for c in CARDS_DATA if c[3] == chosen_rarity]
     if not matching_cards:
@@ -285,7 +297,11 @@ async def roll_card(message: Message):
         await message.answer(f"⏳ У Джоба больше нет карт сейчас для вас, отдыхайте, но приходите через ({rem})")
         return
     
-    card = get_random_card()
+    # Считаем количество предыдущих роллов игрока для защиты новичков
+    rolls_count_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", user_id).execute()
+    total_rolls = rolls_count_res.count or 0
+
+    card = get_random_card(total_rolls)
     await give_card_to_user(user_id, card, datetime.now(timezone.utc), username, first_name)
     
     caption = (
@@ -378,7 +394,6 @@ async def show_balance(message: Message):
 async def top_jobs(message: Message):
     if await check_antispam(message, bot): return
     try:
-        # ИСКЛЮЧАЕМ ЗАБАНЕННЫХ ИЗ ТОПА (is_banned = False)!
         res = supabase.table("users").select("username, first_name, jobs_balance").eq("is_banned", False).gt("jobs_balance", 0).order("jobs_balance", desc=True).limit(30).execute()
         if not res.data:
             await message.answer("💰 Пока никто не заработал ни одного джобса. Начни первым!")
@@ -447,11 +462,20 @@ async def check_user(message: Message):
     top_res = supabase.table("users").select("user_id", count="exact").gt("jobs_balance", user.get("jobs_balance", 0)).execute()
     top_pos = (top_res.count or 0) + 1
 
+    # Проверка готовности ролла (пункт 2)
+    ok_roll, rem_time = can_roll(uid)
+    if ok_roll:
+        roll_status_display = "🟢 Готов к роллу"
+    else:
+        roll_status_display = f"🔴 Не готов (осталось {rem_time})"
+
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
     msg = (
         f"📋 <b>ИНСПЕКЦИЯ ПОЛЬЗОВАТЕЛЯ</b>\n──────────────────────\n"
         f"👤 Игрок: {html.escape(uname_display)} (ID: <code>{uid}</code>)\n"
         f"💰 Баланс: <b>{user.get('jobs_balance', 0)}</b> джобсов | 🏆 Топ: #{top_pos} | 🎴 Карт: {cards_cnt}\n"
+        f"🎲 Общее кол-во роллов: <b>{cards_cnt}</b>\n"
+        f"⏳ Статус ролла: <b>{roll_status_display}</b>\n"
         f"🧊 Статус: <b>{status}</b>\n"
         f"🚨 Нарушения: <b>{spam_cnt}</b> спам-триггеров (Подробно: /logs_user {uid})"
     )
@@ -544,14 +568,19 @@ async def cmd_unban(message: Message):
 
 @dp.message(Command("rc"))
 async def cmd_rc(message: Message):
-    if message.from_user.id != ADMIN_ID: return
+    # ПУНКТ 1: Разрешено использовать как создателю (ADMIN_ID), так и обычным админам
+    if not is_admin(message.from_user.id): return
     args = message.text.split()
-    if len(args) < 2: return
+    if len(args) < 2: 
+        await message.answer("❌ Используй: /rc <id_или_username>")
+        return
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"last_roll_time": None}).eq("user_id", user["user_id"]).execute()
         uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
         await message.answer(f"⏳ Таймер ролла для {html.escape(uname_display)} сброшен.", parse_mode=ParseMode.HTML)
+    else:
+        await message.answer("❌ Пользователь не найден.")
 
 @dp.message(Command("reset_user"))
 async def reset_user(message: Message):
@@ -565,6 +594,11 @@ async def reset_user(message: Message):
         await message.answer("❌ Пользователь не найден.")
         return
     
+    # ПУНКТ 3: Админы не могут делать reset_user главному админу (тебе)
+    if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нельзя сбрасывать прогресс главного разработчика!")
+        return
+
     target_id = user["user_id"]
     supabase.table("user_cards").delete().eq("user_id", target_id).execute()
     supabase.table("users").update({"jobs_balance": 0, "last_roll_time": None}).eq("user_id", target_id).execute()
@@ -619,8 +653,15 @@ async def give_card(message: Message):
     await give_card_to_user(user["user_id"], card, datetime.now(timezone.utc), user.get("username", "no_name"), user.get("first_name", ""))
     
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    
+    # ПУНКТ 4: Разделение текста выдачи карты в зависимости от того, ты это делаешь или твой друг-админ
+    if message.from_user.id == ADMIN_ID:
+        issuer_text = "Разработчик бота Джоб лично выдал вам карту"
+    else:
+        issuer_text = "Админ бота Джоб выдал карту"
+
     caption = (
-        f"🃏 <b>Админ бота Джоб выдал карту</b> «{html.escape(card['name'])} ({html.escape(card['series'])})» пользователю {html.escape(uname_display)} 🃏\n"
+        f"🃏 <b>{issuer_text}</b> «{html.escape(card['name'])} ({html.escape(card['series'])})» пользователю {html.escape(uname_display)} 🃏\n"
         f"✨ Редкость: {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]} ✨\n"
         f"💰 Джобсы: +{card['jobs_award']} 💰\n"
         f"<i>«{html.escape(card['quote'])}»</i>"
@@ -680,7 +721,7 @@ async def cb_ban(cb: CallbackQuery):
 # =========================================
 
 async def main():
-    print("✅ Джоб v2.0 (Manifest Match) запущен!")
+    print("✅ Джоб v2.1 запущен!")
     await dp.start_polling(bot)
 
 keep_alive()
