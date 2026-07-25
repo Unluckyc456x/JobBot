@@ -37,6 +37,10 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# СРАЗУ СОЗДАЕМ БОТА И ДИСПЕТЧЕР ЗДЕСЬ, ДО ФУНКЦИЙ
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
 # Локальная база карт
 CARDS_DATA = [
     (1, "Хоумлендер", "The Boys", "null", "https://i.postimg.cc/R08Z0qmj/IMG-20260612-221053-063.jpg", "Я здесь бог.", 3333),
@@ -176,7 +180,6 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
     return False
 
 def get_random_card(total_user_rolls=0):
-    # Защита для новичков: первые 3 ролла не могут выдать мифические (mythic) и null карты
     if total_user_rolls < 3:
         allowed_rarities = ["common", "uncommon", "rare", "epic", "legendary"]
         sub_chances = {r: RARITY_CHANCES[r] for r in allowed_rarities}
@@ -250,9 +253,6 @@ async def give_card_to_user(user_id, card, now, username="no_name", first_name="
         await bot.send_message(LOG_CHAT_ID, log_msg, parse_mode=ParseMode.HTML)
     except Exception as e:
         print(f"Ошибка логирования ролла: {e}")
-
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
 # ========== ЮЗЕРСКИЕ КОМАНДЫ ==========
 
 @dp.message(Command("start"))
@@ -297,7 +297,6 @@ async def roll_card(message: Message):
         await message.answer(f"⏳ У Джоба больше нет карт сейчас для вас, отдыхайте, но приходите через ({rem})")
         return
     
-    # Считаем количество предыдущих роллов игрока для защиты новичков
     rolls_count_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", user_id).execute()
     total_rolls = rolls_count_res.count or 0
 
@@ -462,7 +461,6 @@ async def check_user(message: Message):
     top_res = supabase.table("users").select("user_id", count="exact").gt("jobs_balance", user.get("jobs_balance", 0)).execute()
     top_pos = (top_res.count or 0) + 1
 
-    # Проверка готовности ролла (пункт 2)
     ok_roll, rem_time = can_roll(uid)
     if ok_roll:
         roll_status_display = "🟢 Готов к роллу"
@@ -568,7 +566,6 @@ async def cmd_unban(message: Message):
 
 @dp.message(Command("rc"))
 async def cmd_rc(message: Message):
-    # ПУНКТ 1: Разрешено использовать как создателю (ADMIN_ID), так и обычным админам
     if not is_admin(message.from_user.id): return
     args = message.text.split()
     if len(args) < 2: 
@@ -594,7 +591,6 @@ async def reset_user(message: Message):
         await message.answer("❌ Пользователь не найден.")
         return
     
-    # ПУНКТ 3: Админы не могут делать reset_user главному админу (тебе)
     if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
         await message.answer("⛔ Нельзя сбрасывать прогресс главного разработчика!")
         return
@@ -654,7 +650,6 @@ async def give_card(message: Message):
     
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
     
-    # ПУНКТ 4: Разделение текста выдачи карты в зависимости от того, ты это делаешь или твой друг-админ
     if message.from_user.id == ADMIN_ID:
         issuer_text = "Разработчик бота Джоб лично выдал вам карту"
     else:
@@ -671,7 +666,6 @@ async def give_card(message: Message):
     except Exception:
         await message.answer(caption, parse_mode=ParseMode.HTML)
 
-# Команды добавления и снятия админки (Строго только для главного создателя ADMIN_ID)
 @dp.message(Command("add_admin"))
 async def cmd_add_admin(message: Message):
     if message.from_user.id != ADMIN_ID: return
