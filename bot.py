@@ -30,16 +30,11 @@ def keep_alive():
 
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = 6990974323  # Твой Telegram ID
-LOG_CHAT_ID = -1005336201694  # ID группы для логов (с -100)
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# СРАЗУ СОЗДАЕМ БОТА И ДИСПЕТЧЕР ЗДЕСЬ, ДО ФУНКЦИЙ
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
 
 # Локальная база карт
 CARDS_DATA = [
@@ -87,6 +82,7 @@ RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "nu
 
 user_request_timestamps = defaultdict(list)
 user_command_history = defaultdict(list)
+forced_next_cards = {} # Хранилище для принудительной выдачи карт по ID
 
 def register_user(user_id, username, first_name=""):
     res = supabase.table("users").select("*").eq("user_id", user_id).execute()
@@ -156,22 +152,6 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
     if len(timestamps) >= 7 or same_cmd_count >= 10:
         tier_label = "Tier 2 (>7 за 5 сек)" if len(timestamps) >= 7 else f"Tier 3 (10x '{cmd_text}' за 10 мин)"
         freeze_user(user_id, tier_label)
-        kb = InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="🔓 Разморозить", callback_data=f"unfreeze:{user_id}"),
-            InlineKeyboardButton(text="⛔ Забанить", callback_data=f"ban:{user_id}")
-        ]])
-        try:
-            uname_display = f"@{message.from_user.username}" if message.from_user.username else (message.from_user.first_name or "без ника")
-            await bot.send_message(
-                LOG_CHAT_ID, 
-                f"🚨 <b>АНТИСПАМ ({tier_label}):</b> Обнаружена подозрительная активность!\n"
-                f"Пользователь: {html.escape(uname_display)} (ID: <code>{user_id}</code>)\n"
-                f"Действие: Автоматическая заморозка (is_frozen = True)",
-                parse_mode=ParseMode.HTML,
-                reply_markup=kb
-            )
-        except Exception as e:
-            print(f"Ошибка отправки в LOG_CHAT_ID: {e}")
         return True
 
     elif len(timestamps) > 1:
@@ -179,7 +159,14 @@ async def check_antispam(message: Message, bot: Bot) -> bool:
 
     return False
 
-def get_random_card(total_user_rolls=0):
+def get_random_card(user_id, total_user_rolls=0):
+    # Проверка на принудительно заданные карты (через команду подкрутки)
+    if user_id in forced_next_cards and forced_next_cards[user_id]:
+        card_id = forced_next_cards[user_id].pop(0)
+        if card_id in CARDS_DICT:
+            return CARDS_DICT[card_id]
+
+    # Защита для новичков: первые 3 ролла не могут выдать мифические (mythic) и null карты
     if total_user_rolls < 3:
         allowed_rarities = ["common", "uncommon", "rare", "epic", "legendary"]
         sub_chances = {r: RARITY_CHANCES[r] for r in allowed_rarities}
@@ -225,7 +212,7 @@ def can_roll(user_id):
     remaining = timedelta(hours=2) - (now - last)
     return False, f"{remaining.seconds // 3600} ч {(remaining.seconds % 3600) // 60} мин"
 
-async def give_card_to_user(user_id, card, now, username="no_name", first_name=""):
+async def give_card_to_user(user_id, card, now):
     user_res = supabase.table("users").select("jobs_balance").eq("user_id", user_id).execute()
     current_jobs = user_res.data[0].get("jobs_balance", 0) if user_res.data else 0
 
@@ -242,17 +229,8 @@ async def give_card_to_user(user_id, card, now, username="no_name", first_name="
         "last_roll_time": now.isoformat()
     }).eq("user_id", user_id).execute()
 
-    try:
-        uname_display = f"@{username}" if username and username != "no_name" else (first_name or "Игрок")
-        log_msg = (
-            f"🎲 <b>Игрок:</b> {html.escape(uname_display)} (ID: <code>{user_id}</code>)\n"
-            f"🃏 <b>Выбил карту:</b> {html.escape(card['name'])} ({html.escape(card['series'])})\n"
-            f"✨ <b>Редкость:</b> {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]}\n"
-            f"💰 <b>Награда:</b> +{card['jobs_award']} джобсов"
-        )
-        await bot.send_message(LOG_CHAT_ID, log_msg, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        print(f"Ошибка логирования ролла: {e}")
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
 # ========== ЮЗЕРСКИЕ КОМАНДЫ ==========
 
 @dp.message(Command("start"))
@@ -297,11 +275,12 @@ async def roll_card(message: Message):
         await message.answer(f"⏳ У Джоба больше нет карт сейчас для вас, отдыхайте, но приходите через ({rem})")
         return
     
+    # Считаем количество предыдущих роллов игрока для защиты новичков
     rolls_count_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", user_id).execute()
     total_rolls = rolls_count_res.count or 0
 
-    card = get_random_card(total_rolls)
-    await give_card_to_user(user_id, card, datetime.now(timezone.utc), username, first_name)
+    card = get_random_card(user_id, total_rolls)
+    await give_card_to_user(user_id, card, datetime.now(timezone.utc))
     
     caption = (
         f"🃏 <b>Джоб достаёт карту «{html.escape(card['name'])} ({html.escape(card['series'])})»</b> 🃏\n"
@@ -620,6 +599,88 @@ async def give_jobs(message: Message):
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
     await message.answer(f"✅ Выдано {amount} джобсов пользователю {html.escape(uname_display)}.", parse_mode=ParseMode.HTML)
 
+# НОВАЯ КОМАНДА 1: Отнятие джобсов у игрока
+@dp.message(Command("take_jobs"))
+async def take_jobs(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /take_jobs <id_или_username> <количество>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    # Проверка: админы не могут отнимать джобсы у главного разработчика (тебя)
+    if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
+        await message.answer("⛔ Нельзя отнимать джобсы у главного разработчика!")
+        return
+
+    try: amount = int(args[2])
+    except: 
+        await message.answer("❌ Количество должно быть числом.")
+        return
+    
+    current_jobs = user.get("jobs_balance", 0)
+    new_jobs = max(0, current_jobs - amount)
+    supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
+    
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"✅ Отнято {amount} джобсов у пользователя {html.escape(uname_display)}. Текущий баланс: {new_jobs}.", parse_mode=ParseMode.HTML)
+
+# НОВАЯ КОМАНДА 2: Подкрутка шансов (выдача конкретных ID карт при следующем ролле)
+@dp.message(Command("rig_roll"))
+async def rig_roll(message: Message):
+    # Доступна ТОЛЬКО главному разработчику (ADMIN_ID)
+    if message.from_user.id != ADMIN_ID:
+        return
+    
+    # Пример использования: /rig_roll @username 30, 29, 28 или /rig_roll @username 30
+    text_payload = message.text.replace("/rig_roll", "").strip()
+    if not text_payload:
+        await message.answer("❌ Используй: /rig_roll <id_или_username> <ID_карт_через_запятую>\nПример: /rig_roll @user 30, 29, 28")
+        return
+    
+    parts = text_payload.split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("❌ Укажи ID карт через запятую.")
+        return
+    
+    user_query = parts[0]
+    cards_raw = parts[1]
+    
+    user = get_target_user(user_query)
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    try:
+        card_ids = [int(cid.strip()) for cid in cards_raw.replace(',', ' ').split() if cid.strip().isdigit()]
+    except Exception:
+        await message.answer("❌ Неверный формат ID карт.")
+        return
+    
+    if not card_ids:
+        await message.answer("❌ Не указано ни одного корректного ID карты.")
+        return
+    
+    # Проверяем существование карт
+    invalid_ids = [cid for cid in card_ids if cid not in CARDS_DICT]
+    if invalid_ids:
+        await message.answer(f"❌ Карты с такими ID не найдены: {invalid_ids}")
+        return
+    
+    target_uid = user["user_id"]
+    if target_uid not in forced_next_cards:
+        forced_next_cards[target_uid] = []
+    
+    forced_next_cards[target_uid].extend(card_ids)
+    
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    card_names = [CARDS_DICT[cid]["name"] for cid in card_ids]
+    await message.answer(f"⚙️ Успешно подкручено! Игроку {html.escape(uname_display)} при следующих роллах выпадут карты: {card_names}[span_0](start_span)[span_0](end_span)", parse_mode=ParseMode.HTML)
+
 @dp.message(Command("give_card"))
 async def give_card(message: Message):
     if not is_admin(message.from_user.id): return
@@ -646,7 +707,7 @@ async def give_card(message: Message):
         await message.answer("❌ Карта не найдена.")
         return
     
-    await give_card_to_user(user["user_id"], card, datetime.now(timezone.utc), user.get("username", "no_name"), user.get("first_name", ""))
+    await give_card_to_user(user["user_id"], card, datetime.now(timezone.utc))
     
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
     
@@ -715,7 +776,7 @@ async def cb_ban(cb: CallbackQuery):
 # =========================================
 
 async def main():
-    print("✅ Джоб v2.1 запущен!")
+    print("✅ Джоб v2.2 запущен без логов в группу!")
     await dp.start_polling(bot)
 
 keep_alive()
