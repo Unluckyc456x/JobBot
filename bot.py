@@ -824,6 +824,378 @@ async def top_jobs(message: Message):
 
     await message.answer(text, parse_mode=ParseMode.HTML)
 
+# ========== АДМИН-КОМАНДЫ ==========
+
+def get_target_user(query_str):
+    query_clean = query_str.lstrip('@').strip()
+    if query_clean.isdigit():
+        res = supabase.table("users").select("*").eq("user_id", int(query_clean)).execute()
+    else:
+        res = supabase.table("users").select("*").ilike("username", query_clean).execute()
+    return res.data[0] if res.data else None
+
+@dp.message(Command("check_user"))
+async def check_user(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /check_user <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    uid = user["user_id"]
+    if user.get("is_banned"):
+        status = "⛔️ ЗАБАНЕН"
+    elif user.get("is_frozen"):
+        status = "🧊 ЗАМОРОЖЕН"
+    else:
+        status = "🟢 Активен"
+    
+    spam_res = supabase.table("spam_logs").select("id", count="exact").eq("user_id", uid).execute()
+    spam_cnt = spam_res.count or 0
+    
+    cards_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", uid).execute()
+    cards_cnt = cards_res.count or 0
+    
+    top_res = supabase.table("users").select("user_id", count="exact").gt("jobs_balance", user.get("jobs_balance", 0)).execute()
+    top_pos = (top_res.count or 0) + 1
+
+    ok_roll, rem_time = can_roll(uid)
+    if ok_roll:
+        roll_status_display = "🟢 Готов к роллу"
+    else:
+        roll_status_display = f"🔴 Не готов (осталось {rem_time})"
+
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    msg = (
+        f"📋 <b>ИНСПЕКЦИЯ ПОЛЬЗОВАТЕЛЯ</b>\n──────────────────────\n"
+        f"👤 Игрок: {html.escape(uname_display)} (ID: <code>{uid}</code>)\n"
+        f"💰 Баланс: <b>{user.get('jobs_balance', 0)}</b> джобсов | 🏆 Топ: #{top_pos} | 🎴 Карт: {cards_cnt}\n"
+        f"🎲 Общее кол-во роллов: <b>{cards_cnt}</b>\n"
+        f"⏳ Статус ролла: <b>{roll_status_display}</b>\n"
+        f"🧊 Статус: <b>{status}</b>\n"
+        f"🚨 Нарушения: <b>{spam_cnt}</b> спам-триггеров (Подробно: /logs_user {uid})"
+    )
+    
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎴 Посмотреть коллекцию", callback_data=f"viewcards:{uid}:0")
+    ]])
+    await message.answer(msg, parse_mode=ParseMode.HTML, reply_markup=kb)
+
+@dp.message(Command("logs_user"))
+async def logs_user(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /logs_user <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    uid = user["user_id"]
+    
+    spams = supabase.table("spam_logs").select("created_at, action_taken, triggers_count").eq("user_id", uid).order("id", desc=True).limit(5).execute()
+    two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    recent_rolls = supabase.table("user_cards").select("card_name, rarity, obtained_at").eq("user_id", uid).gte("obtained_at", two_days_ago).order("id", desc=True).limit(10).execute()
+
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    msg = f"📊 <b>ПОЛНЫЕ ЛОГИ:</b> {html.escape(uname_display)} (ID: <code>{uid}</code>)\n──────────────────────\n\n🚨 <b>ИСТОРИЯ СПАМА:</b>\n"
+    if not spams.data:
+        msg += "• Нарушений не зафиксировано.\n"
+    else:
+        for s in spams.data:
+            msg += f"• {s.get('created_at')[:16]} | {html.escape(str(s.get('action_taken')))}\n"
+            
+    msg += "\n🎲 <b>РОЛЛЫ ЗА 48 ЧАСОВ:</b>\n"
+    if not recent_rolls.data:
+        msg += "• Нет роллов за последние 48 часов.\n"
+    else:
+        for r in recent_rolls.data:
+            emoji = RARITY_EMOJI.get(r.get('rarity'), "🃏")
+            ru_rar = RARITY_RU.get(r.get('rarity'), r.get('rarity'))
+            msg += f"• {r.get('obtained_at')[:16]} — {emoji} [{ru_rar}] {html.escape(r.get('card_name'))}\n"
+
+    await message.answer(msg, parse_mode=ParseMode.HTML)
+
+@dp.message(Command("freeze"))
+async def cmd_freeze(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_frozen": True, "freeze_reason": "Ручная заморозка"}).eq("user_id", user["user_id"]).execute()
+        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+        await message.answer(f"🧊 Пользователь {html.escape(uname_display)} заморожен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("unfreeze"))
+async def cmd_unfreeze(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_frozen": False, "freeze_reason": None}).eq("user_id", user["user_id"]).execute()
+        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+        await message.answer(f"🔓 Пользователь {html.escape(uname_display)} разморожен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("ban"))
+async def cmd_ban(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_banned": True}).eq("user_id", user["user_id"]).execute()
+        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+        await message.answer(f"⛔️ Пользователь {html.escape(uname_display)} забанен (скрыт из топа).", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("unban"))
+async def cmd_unban(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2: return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"is_banned": False}).eq("user_id", user["user_id"]).execute()
+        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+        await message.answer(f"✅ Пользователь {html.escape(uname_display)} разбанен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("rc"))
+async def cmd_rc(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2: 
+        await message.answer("❌ Используй: /rc <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if user:
+        supabase.table("users").update({"last_roll_time": None}).eq("user_id", user["user_id"]).execute()
+        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+        await message.answer(f"⏳ Таймер ролла для {html.escape(uname_display)} сброшен.", parse_mode=ParseMode.HTML)
+    else:
+        await message.answer("❌ Пользователь не найден.")
+
+@dp.message(Command("reset_user"))
+async def reset_user(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /reset_user <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
+        await message.answer("⛔️ Нельзя сбрасывать прогресс главного разработчика!")
+        return
+
+    target_id = user["user_id"]
+    supabase.table("user_cards").delete().eq("user_id", target_id).execute()
+    supabase.table("users").update({"jobs_balance": 0, "last_roll_time": None}).eq("user_id", target_id).execute()
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"✅ Прогресс пользователя {html.escape(uname_display)} (ID: {target_id}) полностью сброшен.", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("give_jobs"))
+async def give_jobs(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /give_jobs <id_или_username> <количество>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    try: amount = int(args[2])
+    except: return
+    
+    new_jobs = user.get("jobs_balance", 0) + amount
+    supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"✅ Выдано {amount} джобсов пользователю {html.escape(uname_display)}.", parse_mode=ParseMode.HTML)
+
+# НОВАЯ КОМАНДА 1: Отнятие джобсов у игрока
+@dp.message(Command("take_jobs"))
+async def take_jobs(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /take_jobs <id_или_username> <количество>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    # Проверка: админы не могут отнимать джобсы у главного разработчика (тебя)
+    if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
+        await message.answer("⛔️ Нельзя отнимать джобсы у главного разработчика!")
+        return
+
+    try: amount = int(args[2])
+    except: 
+        await message.answer("❌ Количество должно быть числом.")
+        return
+    
+    current_jobs = user.get("jobs_balance", 0)
+    new_jobs = max(0, current_jobs - amount)
+    supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
+    
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"✅ Отнято {amount} джобсов у пользователя {html.escape(uname_display)}. Текущий баланс: {new_jobs}.", parse_mode=ParseMode.HTML)
+
+# НОВАЯ КОМАНДА 2: Подкрутка шансов (выдача конкретных ID карт при следующем ролле)
+@dp.message(Command("rig_roll"))
+async def rig_roll(message: Message):
+    # Доступна ТОЛЬКО главному разработчику (ADMIN_ID)
+    if message.from_user.id != ADMIN_ID:
+        return
+    
+    # Пример использования: /rig_roll @username 30, 29, 28 или /rig_roll @username 30
+    text_payload = message.text.replace("/rig_roll", "").strip()
+    if not text_payload:
+        await message.answer("❌ Используй: /rig_roll <id_или_username> <ID_карт_через_запятую>\nПример: /rig_roll @user 30, 29, 28")
+        return
+    
+    parts = text_payload.split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("❌ Укажи ID карт через запятую.")
+        return
+    
+    user_query = parts[0]
+    cards_raw = parts[1]
+    
+    user = get_target_user(user_query)
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    try:
+        card_ids = [int(cid.strip()) for cid in cards_raw.replace(',', ' ').split() if cid.strip().isdigit()]
+    except Exception:
+        await message.answer("❌ Неверный формат ID карт.")
+        return
+    
+    if not card_ids:
+        await message.answer("❌ Не указано ни одного корректного ID карты.")
+        return
+    
+    # Проверяем существование карт
+    invalid_ids = [cid for cid in card_ids if cid not in CARDS_DICT]
+    if invalid_ids:
+        await message.answer(f"❌ Карты с такими ID не найдены: {invalid_ids}")
+        return
+    
+    target_uid = user["user_id"]
+    if target_uid not in forced_next_cards:
+        forced_next_cards[target_uid] = []
+    
+    forced_next_cards[target_uid].extend(card_ids)
+    
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    card_names = [CARDS_DICT[cid]["name"] for cid in card_ids]
+    await message.answer(f"⚙️ Успешно подкручено! Игроку {html.escape(uname_display)} при следующих роллах выпадут карты: {card_names}[span_0](start_span)[span_0](end_span)", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("give_card"))
+async def give_card(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
+    if len(args) < 3:
+        await message.answer("❌ Используй: /give_card <id_или_username> <ID_карты_или_название>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    query = ' '.join(args[2:]).strip()
+    card = None
+    if query.isdigit():
+        card = CARDS_DICT.get(int(query))
+    if not card:
+        for c in CARDS_DATA:
+            if query.lower() in c[1].lower():
+                card = CARDS_DICT[c[0]]
+                break
+    
+    if not card:
+        await message.answer("❌ Карта не найдена.")
+        return
+    
+    await give_card_to_user(user["user_id"], card, datetime.now(timezone.utc))
+    
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    
+    if message.from_user.id == ADMIN_ID:
+        issuer_text = "Разработчик бота Джоб лично выдал вам карту"
+    else:
+        issuer_text = "Админ бота Джоб выдал карту"
+
+    caption = (
+        f"🃏 <b>{issuer_text}</b> «{html.escape(card['name'])} ({html.escape(card['series'])})» пользователю {html.escape(uname_display)} 🃏\n"
+        f"✨ Редкость: {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]} ✨\n"
+        f"💰 Джобсы: +{card['jobs_award']} 💰\n"
+        f"<i>«{html.escape(card['quote'])}»</i>"
+    )
+    try:
+        await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.HTML)
+    except Exception:
+        await message.answer(caption, parse_mode=ParseMode.HTML)
+
+@dp.message(Command("add_admin"))
+async def cmd_add_admin(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /add_admin <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    supabase.table("users").update({"is_admin": True}).eq("user_id", user["user_id"]).execute()
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"👑 Пользователь {html.escape(uname_display)} назначен администратором!", parse_mode=ParseMode.HTML)
+
+@dp.message(Command("remove_admin"))
+async def cmd_remove_admin(message: Message):
+    if message.from_user.id != ADMIN_ID: return
+    args = message.text.split()
+    if len(args) < 2:
+        await message.answer("❌ Используй: /remove_admin <id_или_username>")
+        return
+    user = get_target_user(args[1])
+    if not user:
+        await message.answer("❌ Пользователь не найден.")
+        return
+    
+    supabase.table("users").update({"is_admin": False}).eq("user_id", user["user_id"]).execute()
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
+    await message.answer(f"🚫 У пользователя {html.escape(uname_display)} забраны права администратора.", parse_mode=ParseMode.HTML)
+
+@dp.callback_query(F.data.startswith("unfreeze:"))
+async def cb_unfreeze(cb: CallbackQuery):
+    if not is_admin(cb.from_user.id): return
+    uid = int(cb.data.split(":")[1])
+    supabase.table("users").update({"is_frozen": False, "freeze_reason": None}).eq("user_id", uid).execute()
+    await cb.message.edit_text(cb.message.text + "\n\n✅ <b>ПОЛЬЗОВАТЕЛЬ РАЗМОРОЖЕН</b>", parse_mode=ParseMode.HTML)
+
+@dp.callback_query(F.data.startswith("ban:"))
+async def cb_ban(cb: CallbackQuery):
+    if cb.from_user.id != ADMIN_ID: return
+    uid = int(cb.data.split(":")[1])
+    supabase.table("users").update({"is_banned": True}).eq("user_id", uid).execute()
+    await cb.message.edit_text(cb.message.text + "\n\n⛔️ <b>ПОЛЬЗОВАТЕЛЬ ЗАБАНЕН</b>", parse_mode=ParseMode.HTML)
+
 async def main():
     print("✅ Джоб v2.3 успешно запущен с поддержкой Old-карт!")
     await dp.start_polling(bot)
