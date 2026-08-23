@@ -36,6 +36,9 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# Глобальный словарь для подкрутки роллов (доступен главному админу)
+forced_next_cards = {}
+
 # База карт (60 шт с поддержкой OLD)
 CARDS_DATA = [
     # --- СУЩЕСТВУЮЩИЕ КАРТЫ (1-30) ---
@@ -71,47 +74,32 @@ CARDS_DATA = [
     (30, "Чак Макгилл", "Better Call Saul", "common", "https://i.postimg.cc/B6H4QgMK/IMG-20260612-221052-846.jpg", "Люди не меняются.", 50),
 
     # --- НОВЫЕ КАРТЫ (31-60) ---
-    # NULL (⚫)
     (31, "Танос", "Marvel", "null", "https://i.postimg.cc/jjGrB9DG/IMG-20260822-210720-068.jpg", "Я сама неизбежность.", 3500),
-
-    # OLD (🟤)
     (32, "Шерлок Холмс", "Приключения Шерлока Холмса", "old", "https://i.postimg.cc/pThLFzFk/IMG-20260822-210719-469.jpg", "Элементарно, Ватсон!", 2100),
     (33, "Джек Воробей", "Пираты Карибского моря", "old", "https://i.postimg.cc/Z5wbsVPG/S600x-U-2x.jpg", "Вам запечатлеть этот день, когда чуть не был пленён Капитан Джек Воробей!", 2050),
     (34, "Терминатор T-800", "Терминатор", "old", "https://i.postimg.cc/Hn0Hw2sZ/Terminator-in-Madame-Tussaud-London-(33465711484).jpg", "I'll be back.", 2200),
     (35, "Кевин Маккаллистер", "Один дома", "old", "https://i.postimg.cc/GmmrDv0H/fbba1d8d6eff23b8cd01f290cd3184ab.jpg", "Это мой дом. Я должен его защищать!", 1950),
-
-    # MYTHIC (🔴)
     (36, "Солдатик", "The Boys", "mythic", "https://i.postimg.cc/7hN8GZm1/56cd3f43798077ace1e4f5fb7bbb0404.jpg", "Я не отступаю, я иду напролом.", 2400),
     (37, "Гектор Саламанка", "Breaking Bad", "mythic", "https://i.postimg.cc/0jPhsqPr/IMG-20260822-210720-037.jpg", "Дзинь-дзинь-дзинь!", 1850),
     (38, "Тор", "Marvel", "mythic", "https://i.postimg.cc/4N8qrMMw/IMG-20260822-210719-433.jpg", "Я — Тор, сын Одина!", 2350),
-
-    # LEGENDARY (🟠)
     (39, "Чёрный Нуар", "The Boys", "legendary", "https://i.postimg.cc/d0CfZ005/w1500-50245845-(4).jpg", "...", 1500),
     (40, "Человек-паук", "Marvel", "legendary", "https://i.postimg.cc/tJqvctNw/IMG-20260822-210719-595.jpg", "С большой силой приходит большая ответственность.", 1400),
-    (41, "Тони Старк", "Marvel", "legendary", "https://i.postimg.cc/jjy8dkgr/IMG-20260822-210720-240.jpg", "Я — Железный человек.", 1600),
+    (41, "Тони Старк", "Marvel", "legendary", "https://i.postimg.cc/jjy8dkgr/IMG-20260820-240.jpg", "Я — Железный человек.", 1600),
     (42, "Начо Варга", "Better Call Saul", "legendary", "https://i.postimg.cc/0QW78YqF/IMG-20260822-210720-119.jpg", "Я сам решаю свою судьбу.", 1250),
     (43, "Сильвио Данте", "The Sopranos", "legendary", "https://i.postimg.cc/MZn9nTrH/IMG-20260822-210719-549.jpg", "И когда я думал, что завязал...", 1300),
-
-    # EPIC (🟣)
     (44, "Виктория Ньюман", "The Boys", "epic", "https://i.postimg.cc/LsszGCc4/IMG-20260822-210719-394.jpg", "Главное — держать голову на плечах.", 580),
     (45, "Говард Хэмлин", "Better Call Saul", "epic", "https://i.postimg.cc/N0LHdyXx/Better-Call-Saul-Howard-Hamlin.jpg", "Charlie Hustle, ты зашел слишком далеко.", 450),
     (46, "Оливер Саксон", "Dexter", "epic", "https://i.postimg.cc/RZYFVg3d/4c62a5b03733e98808826ae85c64b0de.jpg", "У всех есть слабости.", 520),
     (47, "Мейсон Верджер", "Hannibal", "epic", "https://i.postimg.cc/R0fMC4xC/IMG-20260822-210719-662.jpg", "Деньги решают всё.", 620),
     (48, "Фредерик Чилтон", "Hannibal", "epic", "https://i.postimg.cc/DfCKT84P/b7f6be3fc7370f479859bc523a677317.jpg", "Я знаю, как устроены их умы.", 420),
-
-    # RARE (🔵)
     (49, "Экспресс", "The Boys", "rare", "https://i.postimg.cc/TYZFdmd5/IMG-20260822-214043.jpg", "Ты не сможешь убежать.", 310),
     (50, "Фурио Джунта", "The Sopranos", "rare", "https://i.postimg.cc/W1LYLv8t/i.jpg", "В Неаполе мы решаем вопросы иначе.", 280),
     (51, "Туко Саламанка", "Breaking Bad", "rare", "https://i.postimg.cc/500nqN9M/43b9b68c200dbba0699dc2472043a98d.jpg", "Плотно! Ох, как плотно!", 350),
     (52, "Джои Куинн", "Dexter", "rare", "https://i.postimg.cc/13Sx06Lb/21d35512d4a58021ee56cfb81a29b799.jpg", "Я просто делаю свою работу.", 260),
     (53, "Алана Блум", "Hannibal", "rare", "https://i.postimg.cc/JhddFBdT/a70e977447ef831847c293f979f191b2.jpg", "Я пытаюсь понять тебя.", 230),
-
-    # UNCOMMON (🟢)
     (54, "Анхель Батиста", "Dexter", "uncommon", "https://i.postimg.cc/3JCfTqcf/1920x.jpg", "Страсть делает нас людьми.", 150),
     (55, "Барсук и Тощий Пит", "Breaking Bad", "uncommon", "https://i.postimg.cc/63vz1bZS/i-(1).jpg", "Чувак, это самый лучший сценарий!", 140),
     (56, "Беверли Катц", "Hannibal", "uncommon", "https://i.postimg.cc/3wyZdfnt/IMG-20260823-113550.jpg", "Улики не врут.", 130),
-
-    # COMMON (⚪)
     (57, "Арти Букко", "The Sopranos", "common", "https://i.postimg.cc/jq64w74R/IMG-20260823-113711.jpg", "Телятина сегодня восхитительна!", 60),
     (58, "Стейси Эрмантраут", "Better Call Saul", "common", "https://i.postimg.cc/s2ZpVQ2C/i-(2).jpg", "Спасибо за помощь, Майк.", 50),
     (59, "Соколиный глаз", "Marvel", "common", "https://i.postimg.cc/RhvfQgL9/683868eea8b2b356f7787c6a9038e41d.jpg", "Я никогда не промахиваюсь.", 75),
@@ -126,10 +114,10 @@ CARDS_DICT = {
 RARITY_CHANCES = {"common":0.54, "uncommon":0.24, "rare":0.11, "epic":0.06, "legendary":0.025, "mythic":0.013, "old":0.005, "null":0.002}
 RARITY_POWDER = {"common":10, "uncommon":25, "rare":50, "epic":100, "legendary":250, "mythic":500, "old":750, "null":1000}
 RARITY_EMOJI = {"common":"⚪", "uncommon":"🟢", "rare":"🔵", "epic":"🟣", "legendary":"🟠", "mythic":"🔴", "old":"🟤", "null":"⚫"}
-RARITY_RU = {"common":"Простая", "uncommon":"Необычная", "rare":"Редкая", "epic":"Эпическая", "legendary":"Легендарная", "mythic":"Мифическая", "old":"Old", "null":"Null"}
+RARITY_RU = {"common":"Простые", "uncommon":"Необычные", "rare":"Редкие", "epic":"Эпические", "legendary":"Легендарные", "mythic":"Мифические", "old":"Old", "null":"Null"}
 RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "old", "null"]
 
-# Титулы
+# Титулы за обычную валюту
 TITLES_SHOP = {
     "cinema": {"name": "✋ Absolutely Cinema 🤚", "price": 2500},
     "netflix": {"name": "👑 King of Netflix", "price": 2500},
@@ -138,27 +126,47 @@ TITLES_SHOP = {
     "vip": {"name": "🎟️ VIP Ticket Holder", "price": 2500}
 }
 
+# Донатные титулы и Эксклюзив Создателя
+DONATE_TITLES = {
+    1: {"name": "🌌 [ Celestial Backer ]", "level": 1, "cost": "15 ⭐"},
+    2: {"name": "⚡ [ Director of the Universe ]", "level": 2, "cost": "50 ⭐"},
+    3: {"name": "👑 [ Absolute Overlord ]", "level": 3, "cost": "100 ⭐"}
+}
+CREATOR_TITLE = "💻⚡ Job Developer"
+
+# Магазин рамок (с категориями)
 FRAMES_SHOP = {
-    "shield": {"emoji": "🛡️", "price": 500, "type": "single"}, "fire": {"emoji": "🔥", "price": 500, "type": "single"},
-    "zap": {"emoji": "⚡", "price": 500, "type": "single"}, "star": {"emoji": "⭐", "price": 500, "type": "single"},
-    "cat": {"emoji": "🐱", "price": 500, "type": "single"}, "zzz": {"emoji": "💤", "price": 500, "type": "single"},
-    "hot": {"emoji": "🥵", "price": 500, "type": "single"}, "yawn": {"emoji": "🥱", "price": 500, "type": "single"},
-    "moyai": {"emoji": "🗿", "price": 500, "type": "single"}, "poop": {"emoji": "💩", "price": 500, "type": "single"},
-    "moon": {"emoji_left": "🌚", "emoji_right": "🌝", "price": 750, "type": "pair"},
-    "monkeys": {"emoji_left": "🙊", "emoji_right": "🙉", "price": 750, "type": "pair"},
-    "wind": {"emoji_left": "🌬️", "emoji_right": "💨", "price": 750, "type": "pair"},
-    "apples": {"emoji_left": "🍎", "emoji_right": "🍏", "price": 750, "type": "pair"},
-    "disks": {"emoji_left": "📀", "emoji_right": "💿", "price": 750, "type": "pair"},
-    "ban": {"emoji_left": "🚫", "emoji_right": "🚫", "price": 1000, "type": "pair"},
-    "rose": {"emoji_left": "🥀", "emoji_right": "🥀", "price": 1000, "type": "pair"},
-    "warn": {"emoji_left": "⚠️", "emoji_right": "⚠️", "price": 1000, "type": "pair"},
-    "preg": {"emoji_left": "🔝", "emoji_right": "🫄", "price": 1000, "type": "pair"},
-    "clown_down": {"emoji_left": "🤡", "emoji_right": "⬇️", "price": 1000, "type": "pair"},
-    "clown_you": {"emoji_left": "🫵", "emoji_right": "🤡", "price": 1000, "type": "pair"},
-    "dragon": {"emoji": "🐲", "price": 3000, "type": "single"}, "gem": {"emoji": "💎", "price": 3000, "type": "single"},
-    "diamond": {"emoji": "♦️", "price": 3000, "type": "single"}, "gear": {"emoji": "⚙️", "price": 3000, "type": "single"},
-    "saturn": {"emoji": "🪐", "price": 3000, "type": "single"}, "banana": {"emoji": "🍌", "price": 3000, "type": "single"},
-    "slot": {"emoji": "🎰", "price": 3000, "type": "single"}
+    "shield": {"emoji": "🛡️", "price": 500, "type": "single", "cat": "normal"},
+    "fire": {"emoji": "🔥", "price": 500, "type": "single", "cat": "normal"},
+    "zap": {"emoji": "⚡", "price": 500, "type": "single", "cat": "normal"},
+    "star": {"emoji": "⭐", "price": 500, "type": "single", "cat": "normal"},
+    "cat": {"emoji": "🐱", "price": 500, "type": "single", "cat": "normal"},
+    "zzz": {"emoji": "💤", "price": 500, "type": "single", "cat": "normal"},
+    "hot": {"emoji": "🥵", "price": 500, "type": "single", "cat": "normal"},
+    "yawn": {"emoji": "🥱", "price": 500, "type": "single", "cat": "normal"},
+    "moyai": {"emoji": "🗿", "price": 500, "type": "single", "cat": "normal"},
+    "poop": {"emoji": "💩", "price": 500, "type": "single", "cat": "normal"},
+    
+    "moon": {"emoji_left": "🌚", "emoji_right": "🌝", "price": 750, "type": "pair", "cat": "pair"},
+    "monkeys": {"emoji_left": "🙊", "emoji_right": "🙉", "price": 750, "type": "pair", "cat": "pair"},
+    "wind": {"emoji_left": "🌬️", "emoji_right": "💨", "price": 750, "type": "pair", "cat": "pair"},
+    "apples": {"emoji_left": "🍎", "emoji_right": "🍏", "price": 750, "type": "pair", "cat": "pair"},
+    "disks": {"emoji_left": "📀", "emoji_right": "💿", "price": 750, "type": "pair", "cat": "pair"},
+    
+    "ban": {"emoji_left": "🚫", "emoji_right": "🚫", "price": 1000, "type": "pair", "cat": "toxic"},
+    "rose": {"emoji_left": "🥀", "emoji_right": "🥀", "price": 1000, "type": "pair", "cat": "toxic"},
+    "warn": {"emoji_left": "⚠️", "emoji_right": "⚠️", "price": 1000, "type": "pair", "cat": "toxic"},
+    "preg": {"emoji_left": "🔝", "emoji_right": "🫄", "price": 1000, "type": "pair", "cat": "toxic"},
+    "clown_down": {"emoji_left": "🤡", "emoji_right": "⬇️", "price": 1000, "type": "pair", "cat": "toxic"},
+    "clown_you": {"emoji_left": "🫵", "emoji_right": "🤡", "price": 1000, "type": "pair", "cat": "toxic"},
+    
+    "dragon": {"emoji": "🐲", "price": 3000, "type": "single", "cat": "elite"},
+    "gem": {"emoji": "💎", "price": 3000, "type": "single", "cat": "elite"},
+    "diamond": {"emoji": "♦️", "price": 3000, "type": "single", "cat": "elite"},
+    "gear": {"emoji": "⚙️", "price": 3000, "type": "single", "cat": "elite"},
+    "saturn": {"emoji": "🪐", "price": 3000, "type": "single", "cat": "elite"},
+    "banana": {"emoji": "🍌", "price": 3000, "type": "single", "cat": "elite"},
+    "slot": {"emoji": "🎰", "price": 3000, "type": "single", "cat": "elite"}
 }
 
 user_request_timestamps = defaultdict(list)
@@ -312,28 +320,33 @@ async def roll_card(message: Message):
     u_res = supabase.table("users").select("*").eq("user_id", uid).execute()
     u_data = u_res.data[0]
     
-    chances = RARITY_CHANCES.copy()
-    if u_data.get("luck_rolls_5x", 0) > 0:
-        chances["epic"] *= 5
-        supabase.table("users").update({"luck_rolls_5x": u_data["luck_rolls_5x"] - 1}).eq("user_id", uid).execute()
-    elif u_data.get("luck_rolls_2x", 0) > 0:
-        for r in chances: chances[r] *= 2
-        supabase.table("users").update({"luck_rolls_2x": u_data["luck_rolls_2x"] - 1}).eq("user_id", uid).execute()
+    # Проверка подкрутки роллов (если администратор использовал /rig_roll)
+    if uid in forced_next_cards and forced_next_cards[uid]:
+        forced_cid = forced_next_cards[uid].pop(0)
+        chosen = CARDS_DICT.get(forced_cid, CARDS_DICT[1])
+    else:
+        chances = RARITY_CHANCES.copy()
+        if u_data.get("luck_rolls_5x", 0) > 0:
+            chances["epic"] *= 5
+            supabase.table("users").update({"luck_rolls_5x": u_data["luck_rolls_5x"] - 1}).eq("user_id", uid).execute()
+        elif u_data.get("luck_rolls_2x", 0) > 0:
+            for r in chances: chances[r] *= 2
+            supabase.table("users").update({"luck_rolls_2x": u_data["luck_rolls_2x"] - 1}).eq("user_id", uid).execute()
 
-    total_w = sum(chances.values())
-    norm_chances = {r: w / total_w for r, w in chances.items()}
+        total_w = sum(chances.values())
+        norm_chances = {r: w / total_w for r, w in chances.items()}
 
-    r = random.random()
-    cum = 0
-    chosen_rarity = "common"
-    for rarity, chance in norm_chances.items():
-        cum += chance
-        if r <= cum:
-            chosen_rarity = rarity
-            break
+        r = random.random()
+        cum = 0
+        chosen_rarity = "common"
+        for rarity, chance in norm_chances.items():
+            cum += chance
+            if r <= cum:
+                chosen_rarity = rarity
+                break
 
-    matching = [c for c in CARDS_DATA if c[3] == chosen_rarity] or CARDS_DATA
-    chosen = CARDS_DICT[random.choice(matching)[0]]
+        matching = [c for c in CARDS_DATA if c[3] == chosen_rarity] or CARDS_DATA
+        chosen = CARDS_DICT[random.choice(matching)[0]]
 
     award = chosen['jobs_award']
     boost_until = u_data.get("boost_until")
@@ -360,7 +373,6 @@ async def roll_card(message: Message):
         await message.answer_photo(photo=chosen["image_url"], caption=caption, parse_mode=ParseMode.HTML)
     except Exception:
         await message.answer(caption, parse_mode=ParseMode.HTML)
-
 # ================= ПОРОШОК (/powder) =================
 
 @dp.message(Command("powder"))
@@ -530,6 +542,7 @@ async def cb_buy_bm(cb: CallbackQuery):
         await cb.answer("✅ Куплен 5х-ролл!", show_alert=True)
 
     await render_bm(uid, cb)
+
 # ================= МАГАЗИН (/shop) =================
 
 @dp.message(Command("shop"))
@@ -537,13 +550,19 @@ async def cmd_shop(message: Message):
     if await check_antispam(message, bot): return
     uid = message.from_user.id
     register_user(uid, message.from_user.username, message.from_user.first_name)
-    
-    text = "🛒 <b>Магазин Джоба</b>\nВыберите категорию:"
+    await render_shop_main(uid, message)
+
+async def render_shop_main(uid, msg_or_cb):
+    text = "🛒 <b>Магазин Джоба</b>\nВыберите категорию товаров:"
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🏷️ Титулы за Джобсы", callback_data=f"shop_cat:{uid}:titles")],
+        [InlineKeyboardButton(text="🖼️ Эмодзи-рамки", callback_data=f"shop_cat:{uid}:frames")],
         [InlineKeyboardButton(text="❌ Закрыть", callback_data="close_menu")]
     ])
-    await message.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    if isinstance(msg_or_cb, Message):
+        await msg_or_cb.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+    else:
+        await msg_or_cb.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("shop_cat:"))
 async def cb_shop_cat(cb: CallbackQuery):
@@ -551,7 +570,7 @@ async def cb_shop_cat(cb: CallbackQuery):
     uid = int(uid_s)
     if not await verify_cb_owner(cb, uid): return
 
-    u_res = supabase.table("users").select("jobs_balance, unlocked_titles").eq("user_id", uid).execute()
+    u_res = supabase.table("users").select("jobs_balance, unlocked_titles, active_frame").eq("user_id", uid).execute()
     jobs = u_res.data[0].get("jobs_balance", 0)
     unlocked = u_res.data[0].get("unlocked_titles") or []
 
@@ -561,8 +580,52 @@ async def cb_shop_cat(cb: CallbackQuery):
         for key, info in TITLES_SHOP.items():
             btn_text = f"{info['name']} (✅ Куплено)" if key in unlocked else f"{info['name']} — {info['price']} 🪙"
             buttons.append([InlineKeyboardButton(text=btn_text, callback_data=f"buy_title:{uid}:{key}")])
+        buttons.append([InlineKeyboardButton(text="◀️ Назад в магазин", callback_data=f"shop_back:{uid}")])
         buttons.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="close_menu")])
         await cb.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    
+    elif cat == "frames":
+        text = f"🖼️ <b>Эмодзи-рамки профиля</b>\nВаш баланс: {jobs} 🪙\n⚠️ <i>Механика: при смене или возврате старой рамки оплата списывается заново!</i>"
+        buttons = [
+            [InlineKeyboardButton(text="🛡️ Обычные (500 🪙)", callback_data=f"frame_sub:{uid}:normal")],
+            [InlineKeyboardButton(text="🌚 Парные (750 🪙)", callback_data=f"frame_sub:{uid}:pair")],
+            [InlineKeyboardButton(text="🤡 Токсичные / Мемные (1 000 🪙)", callback_data=f"frame_sub:{uid}:toxic")],
+            [InlineKeyboardButton(text="🐲 Элитные (3 000 🪙)", callback_data=f"frame_sub:{uid}:elite")],
+            [InlineKeyboardButton(text="◀️ Назад в магазин", callback_data=f"shop_back:{uid}")],
+            [InlineKeyboardButton(text="❌ Закрыть", callback_data="close_menu")]
+        ]
+        await cb.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+
+@dp.callback_query(F.data.startswith("shop_back:"))
+async def cb_shop_back(cb: CallbackQuery):
+    uid = int(cb.data.split(":")[1])
+    if not await verify_cb_owner(cb, uid): return
+    await render_shop_main(uid, cb)
+
+@dp.callback_query(F.data.startswith("frame_sub:"))
+async def cb_frame_sub(cb: CallbackQuery):
+    _, uid_s, sub_cat = cb.data.split(":")
+    uid = int(uid_s)
+    if not await verify_cb_owner(cb, uid): return
+
+    u_res = supabase.table("users").select("jobs_balance").eq("user_id", uid).execute()
+    jobs = u_res.data[0].get("jobs_balance", 0)
+
+    cat_titles = {"normal": "Обычные (500 🪙)", "pair": "Парные (750 🪙)", "toxic": "Токсичные / Мемные (1 000 🪙)", "elite": "Элитные (3 000 🪙)"}
+    text = f"🖼️ <b>Рамки: {cat_titles.get(sub_cat, '')}</b>\nВаш баланс: {jobs} 🪙\nНажмите для покупки и применения:"
+
+    buttons = []
+    for key, info in FRAMES_SHOP.items():
+        if info["cat"] == sub_cat:
+            if info["type"] == "single":
+                label = f"{info['emoji']} — {info['price']} 🪙 [🛒 Купить]"
+            else:
+                label = f"{info['emoji_left']}...{info['emoji_right']} — {info['price']} 🪙 [🛒 Купить]"
+            buttons.append([InlineKeyboardButton(text=label, callback_data=f"buy_frame:{uid}:{key}")])
+
+    buttons.append([InlineKeyboardButton(text="◀️ К выбору категорий", callback_data=f"shop_cat:{uid}:frames")])
+    buttons.append([InlineKeyboardButton(text="❌ Закрыть", callback_data="close_menu")])
+    await cb.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data.startswith("buy_title:"))
 async def cb_buy_title(cb: CallbackQuery):
@@ -584,6 +647,26 @@ async def cb_buy_title(cb: CallbackQuery):
     supabase.table("users").update({"jobs_balance": jobs - info["price"], "unlocked_titles": unlocked, "active_title": info["name"]}).eq("user_id", uid).execute()
     await cb.answer(f"✅ Вы успешно купили титул: {info['name']}!", show_alert=True)
 
+@dp.callback_query(F.data.startswith("buy_frame:"))
+async def cb_buy_frame(cb: CallbackQuery):
+    _, uid_s, key = cb.data.split(":")
+    uid = int(uid_s)
+    if not await verify_cb_owner(cb, uid): return
+
+    info = FRAMES_SHOP[key]
+    u_res = supabase.table("users").select("jobs_balance").eq("user_id", uid).execute()
+    jobs = u_res.data[0].get("jobs_balance", 0)
+
+    if jobs < info["price"]:
+        await cb.answer(f"❌ Недостаточно джобсов! Требуется {info['price']} 🪙.", show_alert=True); return
+
+    # Списываем стоимость (платят каждый раз при смене/покупке согласно ТЗ)
+    supabase.table("users").update({
+        "jobs_balance": jobs - info["price"],
+        "active_frame": key
+    }).eq("user_id", uid).execute()
+
+    await cb.answer(f"✅ Рамка успешно приобретена и установлена (-{info['price']} 🪙)!", show_alert=True)
 # ================= КАЗИНО (/casino) =================
 
 @dp.message(Command("casino"))
@@ -594,7 +677,7 @@ async def cmd_casino(message: Message):
     await render_casino(uid, message)
 
 async def render_casino(uid, msg_or_cb):
-    c_res = supabase.table("casino_bank").select("total_bank").execute()
+    c_res = supabase.table("casino_bank").select("total_bank").eq("id", 1).execute()
     bank = c_res.data[0].get("total_bank", 0) if c_res.data else 0
 
     u_res = supabase.table("users").select("casino_balance").eq("user_id", uid).execute()
@@ -607,6 +690,7 @@ async def render_casino(uid, msg_or_cb):
         "──────────────────────────────\n"
         "• /deposit [сумма] — пополнить счет\n"
         "• /withdraw [сумма] — вывод (Комиссия 15%)\n"
+        "• /check_casino — проверка казны (для админов)\n"
         "• Ставки: от 100 до 1 000 🪙 (Лимит 10/день)"
     )
 
@@ -621,6 +705,13 @@ async def render_casino(uid, msg_or_cb):
         await msg_or_cb.answer(text, parse_mode=ParseMode.HTML, reply_markup=kb)
     else:
         await msg_or_cb.message.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
+
+@dp.message(Command("check_casino"))
+async def cmd_check_casino(message: Message):
+    if not is_admin(message.from_user.id): return
+    c_res = supabase.table("casino_bank").select("total_bank").eq("id", 1).execute()
+    bank = c_res.data[0].get("total_bank", 0) if c_res.data else 0
+    await message.answer(f"🏦 <b>Состояние казны казино:</b> {bank} 🪙", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("deposit"))
 async def cmd_deposit(message: Message):
@@ -658,19 +749,23 @@ async def cmd_withdraw(message: Message):
     if c_bal < amount:
         await message.answer("❌ Недостаточно средств на балансе казино!"); return
 
-    fee = int(amount * 0.15)
-    to_user = amount - fee
-
-    c_bank = supabase.table("casino_bank").select("total_bank").execute()
-    curr_bank = c_bank.data[0]["total_bank"] if c_bank.data else 0
-    supabase.table("casino_bank").update({"total_bank": curr_bank + fee}).eq("id", 1).execute()
+    # Проверка: на главного админа (ADMIN_ID) комиссия с игрового счета казны не действует
+    if uid == ADMIN_ID:
+        fee = 0
+        to_user = amount
+    else:
+        fee = int(amount * 0.15)
+        to_user = amount - fee
+        c_bank = supabase.table("casino_bank").select("total_bank").eq("id", 1).execute()
+        curr_bank = c_bank.data[0]["total_bank"] if c_bank.data else 0
+        supabase.table("casino_bank").update({"total_bank": curr_bank + fee}).eq("id", 1).execute()
 
     supabase.table("users").update({
         "casino_balance": c_bal - amount,
         "jobs_balance": u_res.data[0].get("jobs_balance", 0) + to_user
     }).eq("user_id", uid).execute()
 
-    await message.answer(f"✅ Выведено {to_user} 🪙 (Комиссия 15%: {fee} 🪙 отправлена в казну).")
+    await message.answer(f"✅ Выведено {to_user} 🪙 (Комиссия: {fee} 🪙).")
 
 @dp.callback_query(F.data.startswith("bet:"))
 async def cb_bet(cb: CallbackQuery):
@@ -688,7 +783,7 @@ async def cb_bet(cb: CallbackQuery):
         await cb.answer("❌ Недостаточно средств в казино! Пополните счет: /deposit", show_alert=True); return
 
     r = random.random()
-    c_bank = supabase.table("casino_bank").select("total_bank").execute()
+    c_bank = supabase.table("casino_bank").select("total_bank").eq("id", 1).execute()
     curr_bank = c_bank.data[0]["total_bank"] if c_bank.data else 0
 
     if r <= 0.62:
@@ -723,6 +818,7 @@ async def cb_bet(cb: CallbackQuery):
     )
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="❌ Закрыть", callback_data="close_menu")]])
     await cb.message.edit_text(msg_text, parse_mode=ParseMode.HTML, reply_markup=kb)
+
 # ================= ПРОФИЛЬ (/profile) =================
 
 @dp.message(Command("profile"))
@@ -758,10 +854,10 @@ async def render_profile(uid, msg_or_cb):
     text = (
         f"👤 <b>Профиль игрока:</b> [ {name_disp} ]\n"
         f"🏷️ <b>Титул:</b> [ {html.escape(title_disp)} ]\n"
-        f"⏳ <b>Продюсерский буст:</b> {boost_text}\n\n"
+        f"⏳ <b>Активные эффекты:</b>\n• ⚡ Продюсерский буст (х1.5): {boost_text}\n\n"
         f"📊 <b>Статистика коллекции:</b>\n"
         f"• Всего карт: {total_cards}\n"
-        f"Детализация:\n• {rarity_str if rarity_str else 'Нет карт'}"
+        f"Детализация по редкости (динамически):\n• {rarity_str if rarity_str else 'Нет карт'}"
     )
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -782,16 +878,22 @@ async def cb_achievements(cb: CallbackQuery):
     cards_res = supabase.table("user_cards").select("id", count="exact").eq("user_id", uid).execute()
     total_cards = cards_res.count or 0
 
-    u_res = supabase.table("users").select("null_cards_count").eq("user_id", uid).execute()
-    null_count = u_res.data[0].get("null_cards_count", 0) if u_res.data else 0
+    u_res = supabase.table("users").select("null_cards_count, username, first_name").eq("user_id", uid).execute()
+    u_data = u_res.data[0] if u_res.data else {}
+    null_count = u_data.get("null_cards_count", 0)
 
     achievements = []
     if total_cards >= 500:
-        achievements.append("🃏 <b>The Emperor of Cards</b>\n└ <i>Собрать 500 карт за всё время.</i>")
+        achievements.append("🃏 <b>The Emperor of Cards</b>\n└ Условие получения: Собрать в общей сумме 500 карт за всё время.")
     if null_count >= 3:
-        achievements.append("🎰 <b>Devil's Luck</b>\n└ <i>Выбить 3 Null-карты за всё время.</i>")
+        achievements.append("🎰 <b>Devil's Luck</b>\n└ Условие получения: Выбить 3 Null-карты за всё время.")
 
-    msg_text = "🏆 <b>Достижения:</b>\n\n" + ("\n\n".join(achievements) if achievements else "❌ У вас пока нет достижений.")
+    boss_name = u_data.get("username") if u_data.get("username") and u_data.get("username") != "no_name" else (u_data.get("first_name") or "boss")
+
+    if achievements:
+        msg_text = f"🏆 <b>Достижения игрока: {html.escape(boss_name)}</b>\n\n• " + ("\n• ".join(achievements))
+    else:
+        msg_text = f"🏆 <b>Достижения игрока: {html.escape(boss_name)}</b>\n\n❌ У вас пока нет разблокированных достижений. Крутите карты и испытывайте удачу!"
     
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="◀️ Назад в профиль", callback_data=f"back_profile:{uid}")],
@@ -823,7 +925,6 @@ async def top_jobs(message: Message):
         text += f"{medals.get(i, f'{i}.')} <b>{name_display}</b>{html.escape(title)} — {row.get('jobs_balance', 0)} 🪙\n"
 
     await message.answer(text, parse_mode=ParseMode.HTML)
-
 # ========== АДМИН-КОМАНДЫ ==========
 
 def get_target_user(query_str):
@@ -847,12 +948,7 @@ async def check_user(message: Message):
         return
     
     uid = user["user_id"]
-    if user.get("is_banned"):
-        status = "⛔️ ЗАБАНЕН"
-    elif user.get("is_frozen"):
-        status = "🧊 ЗАМОРОЖЕН"
-    else:
-        status = "🟢 Активен"
+    status = "⛔️ ЗАБАНЕН" if user.get("is_banned") else ("🧊 ЗАМОРОЖЕН" if user.get("is_frozen") else "🟢 Активен")
     
     spam_res = supabase.table("spam_logs").select("id", count="exact").eq("user_id", uid).execute()
     spam_cnt = spam_res.count or 0
@@ -864,10 +960,7 @@ async def check_user(message: Message):
     top_pos = (top_res.count or 0) + 1
 
     ok_roll, rem_time = can_roll(uid)
-    if ok_roll:
-        roll_status_display = "🟢 Готов к роллу"
-    else:
-        roll_status_display = f"🔴 Не готов (осталось {rem_time})"
+    roll_status_display = "🟢 Готов к роллу" if ok_roll else f"🔴 Не готов (осталось {rem_time})"
 
     uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
     msg = (
@@ -879,11 +972,7 @@ async def check_user(message: Message):
         f"🧊 Статус: <b>{status}</b>\n"
         f"🚨 Нарушения: <b>{spam_cnt}</b> спам-триггеров (Подробно: /logs_user {uid})"
     )
-    
-    kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🎴 Посмотреть коллекцию", callback_data=f"viewcards:{uid}:0")
-    ]])
-    await message.answer(msg, parse_mode=ParseMode.HTML, reply_markup=kb)
+    await message.answer(msg, parse_mode=ParseMode.HTML)
 
 @dp.message(Command("logs_user"))
 async def logs_user(message: Message):
@@ -898,8 +987,7 @@ async def logs_user(message: Message):
         return
     
     uid = user["user_id"]
-    
-    spams = supabase.table("spam_logs").select("created_at, action_taken, triggers_count").eq("user_id", uid).order("id", desc=True).limit(5).execute()
+    spams = supabase.table("spam_logs").select("created_at, action_taken").eq("user_id", uid).order("id", desc=True).limit(5).execute()
     two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
     recent_rolls = supabase.table("user_cards").select("card_name, rarity, obtained_at").eq("user_id", uid).gte("obtained_at", two_days_ago).order("id", desc=True).limit(10).execute()
 
@@ -930,8 +1018,7 @@ async def cmd_freeze(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"is_frozen": True, "freeze_reason": "Ручная заморозка"}).eq("user_id", user["user_id"]).execute()
-        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-        await message.answer(f"🧊 Пользователь {html.escape(uname_display)} заморожен.", parse_mode=ParseMode.HTML)
+        await message.answer("🧊 Пользователь заморожен.")
 
 @dp.message(Command("unfreeze"))
 async def cmd_unfreeze(message: Message):
@@ -941,8 +1028,7 @@ async def cmd_unfreeze(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"is_frozen": False, "freeze_reason": None}).eq("user_id", user["user_id"]).execute()
-        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-        await message.answer(f"🔓 Пользователь {html.escape(uname_display)} разморожен.", parse_mode=ParseMode.HTML)
+        await message.answer("🔓 Пользователь разморожен.")
 
 @dp.message(Command("ban"))
 async def cmd_ban(message: Message):
@@ -952,8 +1038,7 @@ async def cmd_ban(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"is_banned": True}).eq("user_id", user["user_id"]).execute()
-        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-        await message.answer(f"⛔️ Пользователь {html.escape(uname_display)} забанен (скрыт из топа).", parse_mode=ParseMode.HTML)
+        await message.answer("⛔️ Пользователь забанен.")
 
 @dp.message(Command("unban"))
 async def cmd_unban(message: Message):
@@ -963,241 +1048,155 @@ async def cmd_unban(message: Message):
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"is_banned": False}).eq("user_id", user["user_id"]).execute()
-        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-        await message.answer(f"✅ Пользователь {html.escape(uname_display)} разбанен.", parse_mode=ParseMode.HTML)
+        await message.answer("✅ Пользователь разбанен.")
 
 @dp.message(Command("rc"))
 async def cmd_rc(message: Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
-    if len(args) < 2: 
-        await message.answer("❌ Используй: /rc <id_или_username>")
-        return
+    if len(args) < 2: return
     user = get_target_user(args[1])
     if user:
         supabase.table("users").update({"last_roll_time": None}).eq("user_id", user["user_id"]).execute()
-        uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-        await message.answer(f"⏳ Таймер ролла для {html.escape(uname_display)} сброшен.", parse_mode=ParseMode.HTML)
-    else:
-        await message.answer("❌ Пользователь не найден.")
+        await message.answer("⏳ Таймер ролла сброшен.")
 
 @dp.message(Command("reset_user"))
 async def reset_user(message: Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
-    if len(args) < 2:
-        await message.answer("❌ Используй: /reset_user <id_или_username>")
-        return
+    if len(args) < 2: return
     user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    
+    if not user: return
     if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
-        await message.answer("⛔️ Нельзя сбрасывать прогресс главного разработчика!")
-        return
-
-    target_id = user["user_id"]
-    supabase.table("user_cards").delete().eq("user_id", target_id).execute()
-    supabase.table("users").update({"jobs_balance": 0, "last_roll_time": None}).eq("user_id", target_id).execute()
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    await message.answer(f"✅ Прогресс пользователя {html.escape(uname_display)} (ID: {target_id}) полностью сброшен.", parse_mode=ParseMode.HTML)
+        await message.answer("⛔️ Нельзя сбрасывать прогресс главного разработчика!"); return
+    supabase.table("user_cards").delete().eq("user_id", user["user_id"]).execute()
+    supabase.table("users").update({"jobs_balance": 0, "last_roll_time": None}).eq("user_id", user["user_id"]).execute()
+    await message.answer("✅ Прогресс пользователя сброшен.")
 
 @dp.message(Command("give_jobs"))
 async def give_jobs(message: Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
-    if len(args) < 3:
-        await message.answer("❌ Используй: /give_jobs <id_или_username> <количество>")
-        return
+    if len(args) < 3: return
     user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
+    if not user: return
     try: amount = int(args[2])
     except: return
-    
     new_jobs = user.get("jobs_balance", 0) + amount
     supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    await message.answer(f"✅ Выдано {amount} джобсов пользователю {html.escape(uname_display)}.", parse_mode=ParseMode.HTML)
+    await message.answer(f"✅ Выдано {amount} джобсов.")
 
-# НОВАЯ КОМАНДА 1: Отнятие джобсов у игрока
 @dp.message(Command("take_jobs"))
 async def take_jobs(message: Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
-    if len(args) < 3:
-        await message.answer("❌ Используй: /take_jobs <id_или_username> <количество>")
-        return
+    if len(args) < 3: return
     user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    
-    # Проверка: админы не могут отнимать джобсы у главного разработчика (тебя)
+    if not user: return
     if user["user_id"] == ADMIN_ID and message.from_user.id != ADMIN_ID:
-        await message.answer("⛔️ Нельзя отнимать джобсы у главного разработчика!")
-        return
-
+        await message.answer("⛔️ Нельзя отнимать джобсы у главного разработчика!"); return
     try: amount = int(args[2])
-    except: 
-        await message.answer("❌ Количество должно быть числом.")
-        return
-    
-    current_jobs = user.get("jobs_balance", 0)
-    new_jobs = max(0, current_jobs - amount)
+    except: return
+    new_jobs = max(0, user.get("jobs_balance", 0) - amount)
     supabase.table("users").update({"jobs_balance": new_jobs}).eq("user_id", user["user_id"]).execute()
-    
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    await message.answer(f"✅ Отнято {amount} джобсов у пользователя {html.escape(uname_display)}. Текущий баланс: {new_jobs}.", parse_mode=ParseMode.HTML)
+    await message.answer(f"✅ Отнято джобсов. Баланс: {new_jobs}.")
 
-# НОВАЯ КОМАНДА 2: Подкрутка шансов (выдача конкретных ID карт при следующем ролле)
 @dp.message(Command("rig_roll"))
 async def rig_roll(message: Message):
-    # Доступна ТОЛЬКО главному разработчику (ADMIN_ID)
-    if message.from_user.id != ADMIN_ID:
-        return
-    
-    # Пример использования: /rig_roll @username 30, 29, 28 или /rig_roll @username 30
+    if message.from_user.id != ADMIN_ID: return
     text_payload = message.text.replace("/rig_roll", "").strip()
-    if not text_payload:
-        await message.answer("❌ Используй: /rig_roll <id_или_username> <ID_карт_через_запятую>\nПример: /rig_roll @user 30, 29, 28")
-        return
-    
     parts = text_payload.split(maxsplit=1)
     if len(parts) < 2:
-        await message.answer("❌ Укажи ID карт через запятую.")
-        return
-    
-    user_query = parts[0]
-    cards_raw = parts[1]
-    
-    user = get_target_user(user_query)
+        await message.answer("❌ Используй: /rig_roll <id_или_username> <ID_карт_через_запятую>"); return
+    user = get_target_user(parts[0])
     if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    
+        await message.answer("❌ Пользователь не найден."); return
     try:
-        card_ids = [int(cid.strip()) for cid in cards_raw.replace(',', ' ').split() if cid.strip().isdigit()]
-    except Exception:
-        await message.answer("❌ Неверный формат ID карт.")
-        return
-    
-    if not card_ids:
-        await message.answer("❌ Не указано ни одного корректного ID карты.")
-        return
-    
-    # Проверяем существование карт
-    invalid_ids = [cid for cid in card_ids if cid not in CARDS_DICT]
-    if invalid_ids:
-        await message.answer(f"❌ Карты с такими ID не найдены: {invalid_ids}")
-        return
+        card_ids = [int(cid.strip()) for cid in parts[1].replace(',', ' ').split() if cid.strip().isdigit()]
+    except:
+        await message.answer("❌ Неверный формат ID карт."); return
     
     target_uid = user["user_id"]
     if target_uid not in forced_next_cards:
         forced_next_cards[target_uid] = []
-    
     forced_next_cards[target_uid].extend(card_ids)
-    
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    card_names = [CARDS_DICT[cid]["name"] for cid in card_ids]
-    await message.answer(f"⚙️ Успешно подкручено! Игроку {html.escape(uname_display)} при следующих роллах выпадут карты: {card_names}[span_0](start_span)[span_0](end_span)", parse_mode=ParseMode.HTML)
+    await message.answer(f"⚙️ Подкручено! Игроку выпадут карты с ID: {card_ids}")
 
 @dp.message(Command("give_card"))
 async def give_card(message: Message):
     if not is_admin(message.from_user.id): return
     args = message.text.split()
+    if len(args) < 3: return
+    user = get_target_user(args[1])
+    if not user: return
+    query = ' '.join(args[2:]).strip()
+    card = CARDS_DICT.get(int(query)) if query.isdigit() else None
+    if not card:
+        for c in CARDS_DATA:
+            if query.lower() in c[1].lower():
+                card = CARDS_DICT[c[0]]; break
+    if not card:
+        await message.answer("❌ Карта не найдена."); return
+    
+    now_iso = datetime.now(timezone.utc).isoformat()
+    supabase.table("user_cards").insert({"user_id": user["user_id"], "card_id": card["id"], "card_name": card["name"], "rarity": card["rarity"], "obtained_at": now_iso}).execute()
+    await message.answer(f"✅ Карта «{card['name']}» успешно выдана игроку!")
+
+# НОВАЯ КОМАНДА: Выдача донатных титулов и эксклюзива разработчика (/give_title @user [уровень_или_dev])
+@dp.message(Command("give_title"))
+async def give_title(message: Message):
+    if not is_admin(message.from_user.id): return
+    args = message.text.split()
     if len(args) < 3:
-        await message.answer("❌ Используй: /give_card <id_или_username> <ID_карты_или_название>")
+        await message.answer("❌ Используй: /give_title <id_или_username> <уровень_1-3 или dev>")
         return
+    
     user = get_target_user(args[1])
     if not user:
         await message.answer("❌ Пользователь не найден.")
         return
     
-    query = ' '.join(args[2:]).strip()
-    card = None
-    if query.isdigit():
-        card = CARDS_DICT.get(int(query))
-    if not card:
-        for c in CARDS_DATA:
-            if query.lower() in c[1].lower():
-                card = CARDS_DICT[c[0]]
-                break
+    param = args[2].lower()
+    target_uid = user["user_id"]
     
-    if not card:
-        await message.answer("❌ Карта не найдена.")
-        return
-    
-    await give_card_to_user(user["user_id"], card, datetime.now(timezone.utc))
-    
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    
-    if message.from_user.id == ADMIN_ID:
-        issuer_text = "Разработчик бота Джоб лично выдал вам карту"
+    if param == "dev":
+        # Эксклюзив Создателя: Личный несгораемый титул разработчика
+        new_title = CREATOR_TITLE
+    elif param.isdigit():
+        lvl = int(param)
+        if lvl in DONATE_TITLES:
+            new_title = DONATE_TITLES[lvl]["name"]
+        else:
+            await message.answer("❌ Неверный уровень донатного титула (доступны 1, 2, 3)."); return
     else:
-        issuer_text = "Админ бота Джоб выдал карту"
+        await message.answer("❌ Неверный параметр. Используйте цифру от 1 до 3 или 'dev'."); return
 
-    caption = (
-        f"🃏 <b>{issuer_text}</b> «{html.escape(card['name'])} ({html.escape(card['series'])})» пользователю {html.escape(uname_display)} 🃏\n"
-        f"✨ Редкость: {RARITY_RU[card['rarity']]} {RARITY_EMOJI[card['rarity']]} ✨\n"
-        f"💰 Джобсы: +{card['jobs_award']} 💰\n"
-        f"<i>«{html.escape(card['quote'])}»</i>"
-    )
-    try:
-        await message.answer_photo(photo=card["image_url"], caption=caption, parse_mode=ParseMode.HTML)
-    except Exception:
-        await message.answer(caption, parse_mode=ParseMode.HTML)
+    supabase.table("users").update({"active_title": new_title}).eq("user_id", target_uid).execute()
+    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'Игрок')
+    await message.answer(f"👑 Пользователю {html.escape(uname_display)} успешно выдан титул: <b>{new_title}</b>", parse_mode=ParseMode.HTML)
 
 @dp.message(Command("add_admin"))
 async def cmd_add_admin(message: Message):
     if message.from_user.id != ADMIN_ID: return
     args = message.text.split()
-    if len(args) < 2:
-        await message.answer("❌ Используй: /add_admin <id_или_username>")
-        return
+    if len(args) < 2: return
     user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    
-    supabase.table("users").update({"is_admin": True}).eq("user_id", user["user_id"]).execute()
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    await message.answer(f"👑 Пользователь {html.escape(uname_display)} назначен администратором!", parse_mode=ParseMode.HTML)
+    if user:
+        supabase.table("users").update({"is_admin": True}).eq("user_id", user["user_id"]).execute()
+        await message.answer("👑 Пользователь назначен администратором.")
 
 @dp.message(Command("remove_admin"))
 async def cmd_remove_admin(message: Message):
     if message.from_user.id != ADMIN_ID: return
     args = message.text.split()
-    if len(args) < 2:
-        await message.answer("❌ Используй: /remove_admin <id_или_username>")
-        return
+    if len(args) < 2: return
     user = get_target_user(args[1])
-    if not user:
-        await message.answer("❌ Пользователь не найден.")
-        return
-    
-    supabase.table("users").update({"is_admin": False}).eq("user_id", user["user_id"]).execute()
-    uname_display = user.get('username') if user.get('username') and user.get('username') != "no_name" else (user.get('first_name') or 'no_name')
-    await message.answer(f"🚫 У пользователя {html.escape(uname_display)} забраны права администратора.", parse_mode=ParseMode.HTML)
-
-@dp.callback_query(F.data.startswith("unfreeze:"))
-async def cb_unfreeze(cb: CallbackQuery):
-    if not is_admin(cb.from_user.id): return
-    uid = int(cb.data.split(":")[1])
-    supabase.table("users").update({"is_frozen": False, "freeze_reason": None}).eq("user_id", uid).execute()
-    await cb.message.edit_text(cb.message.text + "\n\n✅ <b>ПОЛЬЗОВАТЕЛЬ РАЗМОРОЖЕН</b>", parse_mode=ParseMode.HTML)
-
-@dp.callback_query(F.data.startswith("ban:"))
-async def cb_ban(cb: CallbackQuery):
-    if cb.from_user.id != ADMIN_ID: return
-    uid = int(cb.data.split(":")[1])
-    supabase.table("users").update({"is_banned": True}).eq("user_id", uid).execute()
-    await cb.message.edit_text(cb.message.text + "\n\n⛔️ <b>ПОЛЬЗОВАТЕЛЬ ЗАБАНЕН</b>", parse_mode=ParseMode.HTML)
+    if user:
+        supabase.table("users").update({"is_admin": False}).eq("user_id", user["user_id"]).execute()
+        await message.answer("🚫 Права администратора забраны.")
 
 async def main():
-    print("✅ Джоб v2.3 успешно запущен с поддержкой Old-карт!")
+    print("✅ Джоб v2.3 полностью готов и запущен!")
     await dp.start_polling(bot)
 
 keep_alive()
